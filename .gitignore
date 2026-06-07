@@ -1,0 +1,30 @@
+# ---------- Secrets (SABSE ZAROORI) ----------
+.env
+.env.local
+.env*.local
+*.key
+*.pem
+
+# ---------- Python (backend) ----------
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# ---------- Node / Next.js (frontend) ----------
+node_modules/
+.next/
+out/
+build/
+
+# ---------- Datasets & Models (bhaari + sensitive user data) ----------
+datasets/
+uploads/
+*.csv
+*.pkl
+*.h5
+
+# ---------- OS / Editor junk ----------
+.DS_Store
+Thumbs.db
+.vscode/
