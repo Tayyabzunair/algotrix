@@ -48,8 +48,15 @@ type TrainingReport = {
   results: ModelResult[];
   best_model: string;
   best_accuracy: number;
+  detailed_metrics: {
+    accuracy: number;
+    precision: number;
+    recall: number;
+    f1_score: number;
+  };
   model_file: string;
 };
+
 
 type TargetAnalysis = {
   recommended_target: string | null;
@@ -372,7 +379,43 @@ export default function UploadPage() {
                 🏆 Best model: <strong>{training.best_model}</strong> with{" "}
                 <strong>{training.best_accuracy}%</strong> CV accuracy.
               </p>
-
+{/* Detailed metrics for the best model */}
+              <div
+                style={{
+                  marginTop: "16px",
+                  padding: "16px",
+                  border: "1px solid #444",
+                  borderRadius: "8px",
+                }}
+              >
+                <h3 style={{ marginTop: 0 }}>Detailed Metrics (Best Model)</h3>
+                <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ fontSize: "13px", color: "#aaa" }}>Accuracy</div>
+                    <strong style={{ fontSize: "20px" }}>
+                      {training.detailed_metrics.accuracy}%
+                    </strong>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "13px", color: "#aaa" }}>Precision</div>
+                    <strong style={{ fontSize: "20px" }}>
+                      {training.detailed_metrics.precision}%
+                    </strong>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "13px", color: "#aaa" }}>Recall</div>
+                    <strong style={{ fontSize: "20px" }}>
+                      {training.detailed_metrics.recall}%
+                    </strong>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "13px", color: "#aaa" }}>F1 Score</div>
+                    <strong style={{ fontSize: "20px" }}>
+                      {training.detailed_metrics.f1_score}%
+                    </strong>
+                  </div>
+                </div>
+              </div>
               <a
                 href="http://localhost:8000/download-model"
                 style={{
