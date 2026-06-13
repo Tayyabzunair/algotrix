@@ -6,7 +6,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 
 def train_models(file_path: str, target_column: str):
@@ -17,7 +17,7 @@ def train_models(file_path: str, target_column: str):
     if target_column not in df.columns:
         return {"error": f"Target column '{target_column}' not found in dataset."}
 
-    # 3. Drop rows where the target itself is missing (we cannot learn from those)
+    # 3. Drop rows where the target itself is missing
     df = df.dropna(subset=[target_column])
 
     # 4. Separate features (X) from target (y)
@@ -62,20 +62,16 @@ def train_models(file_path: str, target_column: str):
         cv_folds = 2
 
     for name, model in models.items():
-        # Train on the training set and measure test accuracy (single split)
         model.fit(X_train, y_train)
         predictions = model.predict(X_test)
         test_accuracy = accuracy_score(y_test, predictions)
 
-        # Cross-validation: train/test the model several times on different splits
         cv_scores = cross_val_score(model, X, y, cv=cv_folds)
         cv_accuracy = cv_scores.mean()
 
-        # Accuracy on the training data itself (used to detect overfitting)
         train_predictions = model.predict(X_train)
         train_accuracy = accuracy_score(y_train, train_predictions)
 
-        # Decide if the model is overfitting, underfitting, or healthy
         gap = train_accuracy - cv_accuracy
         if cv_accuracy < 0.6:
             health = "Underfitting (model is too weak)"
@@ -92,18 +88,30 @@ def train_models(file_path: str, target_column: str):
             "health": health,
         })
 
-        # Pick the best model based on CROSS-VALIDATION accuracy (more reliable)
         if cv_accuracy > best_accuracy:
             best_accuracy = cv_accuracy
             best_model_name = name
 
-    # 9b. Re-train the best model on ALL data and save it as a .pkl file
+    # 9b. Detailed metrics for the BEST model (while it is still trained on X_train only)
+    best_predictions = models[best_model_name].predict(X_test)
+    detailed_metrics = {
+        "accuracy": round(float(accuracy_score(y_test, best_predictions)) * 100, 2),
+        "precision": round(
+            float(precision_score(y_test, best_predictions, average="weighted", zero_division=0)) * 100, 2
+        ),
+        "recall": round(
+            float(recall_score(y_test, best_predictions, average="weighted", zero_division=0)) * 100, 2
+        ),
+        "f1_score": round(
+            float(f1_score(y_test, best_predictions, average="weighted", zero_division=0)) * 100, 2
+        ),
+    }
+
+    # 9c. Re-train the best model on ALL data and save it as a .pkl file
     best_model = models[best_model_name]
-    best_model.fit(X, y)   # train on the full dataset now, not just 80%
+    best_model.fit(X, y)
 
-    # Make sure a folder exists to store trained models
     os.makedirs("trained_models", exist_ok=True)
-
     model_filename = "trained_models/best_model.pkl"
     joblib.dump(best_model, model_filename)
 
@@ -115,5 +123,6 @@ def train_models(file_path: str, target_column: str):
         "results": results,
         "best_model": best_model_name,
         "best_accuracy": round(float(best_accuracy) * 100, 2),
+        "detailed_metrics": detailed_metrics,
         "model_file": model_filename,
     }
