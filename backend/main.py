@@ -1,7 +1,8 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form
 from profiler import profile_dataset
 from cleaner import clean_dataset
 from target_analyzer import analyze_columns
+from trainer import train_models
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -59,3 +60,10 @@ async def analyze_target(file: UploadFile = File(...)):
 
     result = analyze_columns("temp_target.csv")
     return result
+@app.post("/train")
+async def train(file: UploadFile = File(...), target_column: str = Form(...)):
+    contents = await file.read()
+    with open("temp_train.csv", "wb") as f:
+        f.write(contents)
+    report = train_models("temp_train.csv", target_column)
+    return report
