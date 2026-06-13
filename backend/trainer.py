@@ -1,7 +1,7 @@
 import pandas as pd
 import joblib
 import os
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
@@ -50,23 +50,51 @@ def train_models(file_path: str, target_column: str):
         "Random Forest": RandomForestClassifier(random_state=42),
     }
 
-    # 9. Train each model and measure its accuracy on the test set
+    # 9. Train each model, run cross-validation, and check model health
     results = []
     best_model_name = None
     best_accuracy = -1
 
+    # Choose a safe number of folds (small datasets need fewer folds)
+    smallest_class = pd.Series(y).value_counts().min()
+    cv_folds = min(5, smallest_class)
+    if cv_folds < 2:
+        cv_folds = 2
+
     for name, model in models.items():
+        # Train on the training set and measure test accuracy (single split)
         model.fit(X_train, y_train)
         predictions = model.predict(X_test)
-        accuracy = accuracy_score(y_test, predictions)
+        test_accuracy = accuracy_score(y_test, predictions)
+
+        # Cross-validation: train/test the model several times on different splits
+        cv_scores = cross_val_score(model, X, y, cv=cv_folds)
+        cv_accuracy = cv_scores.mean()
+
+        # Accuracy on the training data itself (used to detect overfitting)
+        train_predictions = model.predict(X_train)
+        train_accuracy = accuracy_score(y_train, train_predictions)
+
+        # Decide if the model is overfitting, underfitting, or healthy
+        gap = train_accuracy - cv_accuracy
+        if cv_accuracy < 0.6:
+            health = "Underfitting (model is too weak)"
+        elif gap > 0.15:
+            health = "Overfitting (memorizing, not learning)"
+        else:
+            health = "Healthy"
 
         results.append({
             "model": name,
-            "accuracy": round(float(accuracy) * 100, 2),
+            "test_accuracy": round(float(test_accuracy) * 100, 2),
+            "cv_accuracy": round(float(cv_accuracy) * 100, 2),
+            "train_accuracy": round(float(train_accuracy) * 100, 2),
+            "health": health,
         })
 
-        if accuracy > best_accuracy:
-            best_accuracy = accuracy
+        # Pick the best model based on CROSS-VALIDATION accuracy (more reliable)
+        if cv_accuracy > best_accuracy:
+            best_accuracy = cv_accuracy
             best_model_name = name
 
     # 9b. Re-train the best model on ALL data and save it as a .pkl file

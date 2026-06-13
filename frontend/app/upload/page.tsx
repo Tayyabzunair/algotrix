@@ -375,7 +375,6 @@ export default function UploadPage() {
               >
                 ⬇️ Download Model (.pkl)
               </a>
-
             </div>
           )}
         </div>
