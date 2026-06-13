@@ -35,7 +35,10 @@ type TargetColumn = {
 
 type ModelResult = {
   model: string;
-  accuracy: number;
+  test_accuracy: number;
+  cv_accuracy: number;
+  train_accuracy: number;
+  health: string;
 };
 
 type TrainingReport = {
@@ -323,11 +326,13 @@ export default function UploadPage() {
                 <strong>{training.rows_used}</strong>
               </p>
 
-              <table style={{ borderCollapse: "collapse", marginTop: "12px" }}>
+              <table style={{ borderCollapse: "collapse", marginTop: "12px", width: "100%" }}>
                 <thead>
                   <tr>
                     <th style={{ border: "1px solid #ccc", padding: "8px" }}>Model</th>
-                    <th style={{ border: "1px solid #ccc", padding: "8px" }}>Accuracy</th>
+                    <th style={{ border: "1px solid #ccc", padding: "8px" }}>CV Accuracy</th>
+                    <th style={{ border: "1px solid #ccc", padding: "8px" }}>Train Accuracy</th>
+                    <th style={{ border: "1px solid #ccc", padding: "8px" }}>Health</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -344,7 +349,19 @@ export default function UploadPage() {
                         {r.model === training.best_model ? " ⭐ Best" : ""}
                       </td>
                       <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                        {r.accuracy}%
+                        {r.cv_accuracy}%
+                      </td>
+                      <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                        {r.train_accuracy}%
+                      </td>
+                      <td
+                        style={{
+                          border: "1px solid #ccc",
+                          padding: "8px",
+                          color: r.health === "Healthy" ? "#10B981" : "#EF4444",
+                        }}
+                      >
+                        {r.health}
                       </td>
                     </tr>
                   ))}
@@ -353,11 +370,7 @@ export default function UploadPage() {
 
               <p style={{ marginTop: "12px" }}>
                 🏆 Best model: <strong>{training.best_model}</strong> with{" "}
-                <strong>{training.best_accuracy}%</strong> accuracy.
-              </p>
-                            <p style={{ marginTop: "12px" }}>
-                🏆 Best model: <strong>{training.best_model}</strong> with{" "}
-                <strong>{training.best_accuracy}%</strong> accuracy.
+                <strong>{training.best_accuracy}%</strong> CV accuracy.
               </p>
 
               <a
