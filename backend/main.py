@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File
 from profiler import profile_dataset
+from cleaner import clean_dataset
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -34,4 +35,16 @@ async def profile(file: UploadFile = File(...)):
 
     # Profile the saved file
     report = profile_dataset("temp_upload.csv")
+    return report
+
+
+@app.post("/clean")
+async def clean(file: UploadFile = File(...)):
+    # Save the uploaded file temporarily
+    contents = await file.read()
+    with open("temp_clean.csv", "wb") as f:
+        f.write(contents)
+
+    # Clean the dataset
+    report = clean_dataset("temp_clean.csv")
     return report

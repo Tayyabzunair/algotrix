@@ -17,12 +17,21 @@ type ProfileReport = {
   duplicate_rows: number;
   columns: ColumnInfo[];
 };
+// Type for the cleaning report from the Python backend
+type CleaningReport = {
+  actions: string[];
+  rows_after_cleaning: number;
+  columns_after_cleaning: number;
+  cleaned_file: string;
+};
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
   const [report, setReport] = useState<ProfileReport | null>(null);
+  const [cleaning, setCleaning] = useState<CleaningReport | null>(null);
+
 
   async function handleUpload() {
     if (!file) {
@@ -33,6 +42,7 @@ export default function UploadPage() {
     setUploading(true);
     setMessage("");
     setReport(null);
+    setCleaning(null);
 
     const supabase = createClient();
 
@@ -86,13 +96,31 @@ export default function UploadPage() {
         body: formData,
       });
 
-      if (!response.ok) {
+            if (!response.ok) {
         setMessage("Uploaded, but analysis failed.");
       } else {
         const data: ProfileReport = await response.json();
         setReport(data);
-        setMessage("Done! Here is your data profile:");
+        setMessage("Profiling done. Now cleaning the dataset...");
+
+        // Send the file again to the cleaning endpoint
+        const cleanForm = new FormData();
+        cleanForm.append("file", file);
+
+        const cleanResponse = await fetch("http://localhost:8000/clean", {
+          method: "POST",
+          body: cleanForm,
+        });
+
+        if (cleanResponse.ok) {
+          const cleanData: CleaningReport = await cleanResponse.json();
+          setCleaning(cleanData);
+          setMessage("Done! Profile and cleaning report are ready:");
+        } else {
+          setMessage("Profiled, but cleaning failed.");
+        }
       }
+
     } catch {
       setMessage("Uploaded, but could not reach the analysis server.");
     }
@@ -157,6 +185,24 @@ export default function UploadPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+        {/* Show the cleaning report if we have one */}
+      {cleaning && (
+        <div style={{ marginTop: "30px" }}>
+          <h2>Cleaning Report</h2>
+          <p>Rows after cleaning: {cleaning.rows_after_cleaning}</p>
+          <ul style={{ marginTop: "10px" }}>
+            {cleaning.actions.length === 0 ? (
+              <li>No issues found. Dataset was already clean!</li>
+            ) : (
+              cleaning.actions.map((action, index) => (
+                <li key={index} style={{ marginBottom: "6px" }}>
+                  {action}
+                </li>
+              ))
+            )}
+          </ul>
         </div>
       )}
     </main>
