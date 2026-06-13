@@ -24,7 +24,6 @@ type CleaningReport = {
   cleaned_file: string;
 };
 
-// Type for each scored column from the target analyzer
 type TargetColumn = {
   name: string;
   score: number;
@@ -32,6 +31,21 @@ type TargetColumn = {
   unique_values: number;
   missing_values: number;
   reason: string;
+};
+
+type ModelResult = {
+  model: string;
+  accuracy: number;
+};
+
+type TrainingReport = {
+  target_column: string;
+  rows_used: number;
+  features_used: string[];
+  results: ModelResult[];
+  best_model: string;
+  best_accuracy: number;
+  model_file: string;
 };
 
 type TargetAnalysis = {
@@ -47,6 +61,8 @@ export default function UploadPage() {
   const [cleaning, setCleaning] = useState<CleaningReport | null>(null);
   const [targetAnalysis, setTargetAnalysis] = useState<TargetAnalysis | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<string>("");
+  const [training, setTraining] = useState<TrainingReport | null>(null);
+  const [isTraining, setIsTraining] = useState(false);
 
   async function handleUpload() {
     if (!file) {
@@ -75,7 +91,6 @@ export default function UploadPage() {
 
     const filePath = `${user.id}/${Date.now()}-${file.name}`;
 
-    // 1) Upload to Supabase Storage
     const { error } = await supabase.storage
       .from("datasets")
       .upload(filePath, file);
@@ -86,7 +101,6 @@ export default function UploadPage() {
       return;
     }
 
-    // 2) Save record in database
     const { error: dbError } = await supabase.from("datasets").insert({
       user_id: user.id,
       file_name: file.name,
@@ -102,7 +116,6 @@ export default function UploadPage() {
     setMessage("File uploaded. Analyzing...");
 
     try {
-      // 3) Profile
       const profileForm = new FormData();
       profileForm.append("file", file);
       const profileRes = await fetch("http://localhost:8000/profile", {
@@ -113,7 +126,6 @@ export default function UploadPage() {
         setReport(await profileRes.json());
       }
 
-      // 4) Clean
       const cleanForm = new FormData();
       cleanForm.append("file", file);
       const cleanRes = await fetch("http://localhost:8000/clean", {
@@ -124,7 +136,6 @@ export default function UploadPage() {
         setCleaning(await cleanRes.json());
       }
 
-      // 5) Analyze target columns
       const targetForm = new FormData();
       targetForm.append("file", file);
       const targetRes = await fetch("http://localhost:8000/analyze-target", {
@@ -134,7 +145,6 @@ export default function UploadPage() {
       if (targetRes.ok) {
         const targetData: TargetAnalysis = await targetRes.json();
         setTargetAnalysis(targetData);
-        // Pre-select the recommended target
         if (targetData.recommended_target) {
           setSelectedTarget(targetData.recommended_target);
         }
@@ -148,11 +158,46 @@ export default function UploadPage() {
     setUploading(false);
   }
 
-  // Helper: choose a color based on score
+  async function handleTrain() {
+    if (!file || !selectedTarget) {
+      setMessage("Please select a target column first.");
+      return;
+    }
+
+    setIsTraining(true);
+    setTraining(null);
+    setMessage("Training models... this may take a moment.");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("target_column", selectedTarget);
+
+      const res = await fetch("http://localhost:8000/train", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        setMessage("Training failed. Please check the backend server.");
+        setIsTraining(false);
+        return;
+      }
+
+      const data: TrainingReport = await res.json();
+      setTraining(data);
+      setMessage("Training complete! Here are your results.");
+    } catch {
+      setMessage("Could not reach the training server. Is it running?");
+    }
+
+    setIsTraining(false);
+  }
+
   function scoreColor(score: number): string {
-    if (score >= 80) return "#10B981"; // green
-    if (score >= 50) return "#F59E0B"; // amber
-    return "#EF4444"; // red
+    if (score >= 80) return "#10B981";
+    if (score >= 50) return "#F59E0B";
+    return "#EF4444";
   }
 
   return (
@@ -178,7 +223,6 @@ export default function UploadPage() {
 
       {message && <p style={{ marginTop: "20px" }}>{message}</p>}
 
-      {/* Profile report */}
       {report && (
         <div style={{ marginTop: "30px" }}>
           <h2>Dataset Profile</h2>
@@ -186,7 +230,6 @@ export default function UploadPage() {
         </div>
       )}
 
-      {/* Cleaning report */}
       {cleaning && (
         <div style={{ marginTop: "25px" }}>
           <h2>Cleaning Report</h2>
@@ -202,7 +245,6 @@ export default function UploadPage() {
         </div>
       )}
 
-      {/* Target selection with confidence scoring */}
       {targetAnalysis && (
         <div style={{ marginTop: "30px" }}>
           <h2>Choose Target Column</h2>
@@ -231,7 +273,6 @@ export default function UploadPage() {
                   <span style={{ color: scoreColor(col.score) }}>{col.score}%</span>
                 </div>
 
-                {/* Confidence bar */}
                 <div style={{ background: "#222", borderRadius: "4px", height: "8px", marginTop: "8px" }}>
                   <div
                     style={{
@@ -252,6 +293,69 @@ export default function UploadPage() {
             <p style={{ marginTop: "15px" }}>
               Selected target: <strong>{selectedTarget}</strong>
             </p>
+          )}
+
+          {selectedTarget && (
+            <div style={{ marginTop: "24px" }}>
+              <button
+                onClick={handleTrain}
+                disabled={isTraining}
+                style={{
+                  padding: "12px 24px",
+                  fontSize: "16px",
+                  backgroundColor: isTraining ? "#9CA3AF" : "#10B981",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: isTraining ? "not-allowed" : "pointer",
+                }}
+              >
+                {isTraining ? "Training..." : `Train Model on "${selectedTarget}"`}
+              </button>
+            </div>
+          )}
+
+          {training && (
+            <div style={{ marginTop: "24px" }}>
+              <h2>Training Results</h2>
+              <p>
+                Target column: <strong>{training.target_column}</strong> | Rows used:{" "}
+                <strong>{training.rows_used}</strong>
+              </p>
+
+              <table style={{ borderCollapse: "collapse", marginTop: "12px" }}>
+                <thead>
+                  <tr>
+                    <th style={{ border: "1px solid #ccc", padding: "8px" }}>Model</th>
+                    <th style={{ border: "1px solid #ccc", padding: "8px" }}>Accuracy</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {training.results.map((r) => (
+                    <tr
+                      key={r.model}
+                      style={{
+                        backgroundColor:
+                          r.model === training.best_model ? "#D1FAE5" : "transparent",
+                      }}
+                    >
+                      <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                        {r.model}
+                        {r.model === training.best_model ? " ⭐ Best" : ""}
+                      </td>
+                      <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                        {r.accuracy}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <p style={{ marginTop: "12px" }}>
+                🏆 Best model: <strong>{training.best_model}</strong> with{" "}
+                <strong>{training.best_accuracy}%</strong> accuracy.
+              </p>
+            </div>
           )}
         </div>
       )}

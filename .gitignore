@@ -19,6 +19,7 @@ build/
 
 # ---------- Datasets & Models (bhaari + sensitive user data) ----------
 datasets/
+trained_models/
 uploads/
 *.csv
 *.pkl
