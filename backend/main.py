@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File
 from profiler import profile_dataset
 from cleaner import clean_dataset
+from target_analyzer import analyze_columns
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -48,3 +49,13 @@ async def clean(file: UploadFile = File(...)):
     # Clean the dataset
     report = clean_dataset("temp_clean.csv")
     return report
+
+
+@app.post("/analyze-target")
+async def analyze_target(file: UploadFile = File(...)):
+    contents = await file.read()
+    with open("temp_target.csv", "wb") as f:
+        f.write(contents)
+
+    result = analyze_columns("temp_target.csv")
+    return result
