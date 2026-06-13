@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-// Type for the profile report coming from the Python backend
 type ColumnInfo = {
   name: string;
   dtype: string;
@@ -17,12 +16,27 @@ type ProfileReport = {
   duplicate_rows: number;
   columns: ColumnInfo[];
 };
-// Type for the cleaning report from the Python backend
+
 type CleaningReport = {
   actions: string[];
   rows_after_cleaning: number;
   columns_after_cleaning: number;
   cleaned_file: string;
+};
+
+// Type for each scored column from the target analyzer
+type TargetColumn = {
+  name: string;
+  score: number;
+  problem_type: string;
+  unique_values: number;
+  missing_values: number;
+  reason: string;
+};
+
+type TargetAnalysis = {
+  recommended_target: string | null;
+  columns: TargetColumn[];
 };
 
 export default function UploadPage() {
@@ -31,7 +45,8 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false);
   const [report, setReport] = useState<ProfileReport | null>(null);
   const [cleaning, setCleaning] = useState<CleaningReport | null>(null);
-
+  const [targetAnalysis, setTargetAnalysis] = useState<TargetAnalysis | null>(null);
+  const [selectedTarget, setSelectedTarget] = useState<string>("");
 
   async function handleUpload() {
     if (!file) {
@@ -43,10 +58,11 @@ export default function UploadPage() {
     setMessage("");
     setReport(null);
     setCleaning(null);
+    setTargetAnalysis(null);
+    setSelectedTarget("");
 
     const supabase = createClient();
 
-    // Get the current logged-in user
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -57,7 +73,6 @@ export default function UploadPage() {
       return;
     }
 
-    // File path: user-id/timestamp-filename.csv
     const filePath = `${user.id}/${Date.now()}-${file.name}`;
 
     // 1) Upload to Supabase Storage
@@ -71,7 +86,7 @@ export default function UploadPage() {
       return;
     }
 
-    // 2) Save a record in the database
+    // 2) Save record in database
     const { error: dbError } = await supabase.from("datasets").insert({
       user_id: user.id,
       file_name: file.name,
@@ -84,43 +99,48 @@ export default function UploadPage() {
       return;
     }
 
-    setMessage("File uploaded successfully ✅ Now analyzing...");
+    setMessage("File uploaded. Analyzing...");
 
-    // 3) Send the same file to the Python backend for profiling
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await fetch("http://localhost:8000/profile", {
+      // 3) Profile
+      const profileForm = new FormData();
+      profileForm.append("file", file);
+      const profileRes = await fetch("http://localhost:8000/profile", {
         method: "POST",
-        body: formData,
+        body: profileForm,
       });
+      if (profileRes.ok) {
+        setReport(await profileRes.json());
+      }
 
-            if (!response.ok) {
-        setMessage("Uploaded, but analysis failed.");
-      } else {
-        const data: ProfileReport = await response.json();
-        setReport(data);
-        setMessage("Profiling done. Now cleaning the dataset...");
+      // 4) Clean
+      const cleanForm = new FormData();
+      cleanForm.append("file", file);
+      const cleanRes = await fetch("http://localhost:8000/clean", {
+        method: "POST",
+        body: cleanForm,
+      });
+      if (cleanRes.ok) {
+        setCleaning(await cleanRes.json());
+      }
 
-        // Send the file again to the cleaning endpoint
-        const cleanForm = new FormData();
-        cleanForm.append("file", file);
-
-        const cleanResponse = await fetch("http://localhost:8000/clean", {
-          method: "POST",
-          body: cleanForm,
-        });
-
-        if (cleanResponse.ok) {
-          const cleanData: CleaningReport = await cleanResponse.json();
-          setCleaning(cleanData);
-          setMessage("Done! Profile and cleaning report are ready:");
-        } else {
-          setMessage("Profiled, but cleaning failed.");
+      // 5) Analyze target columns
+      const targetForm = new FormData();
+      targetForm.append("file", file);
+      const targetRes = await fetch("http://localhost:8000/analyze-target", {
+        method: "POST",
+        body: targetForm,
+      });
+      if (targetRes.ok) {
+        const targetData: TargetAnalysis = await targetRes.json();
+        setTargetAnalysis(targetData);
+        // Pre-select the recommended target
+        if (targetData.recommended_target) {
+          setSelectedTarget(targetData.recommended_target);
         }
       }
 
+      setMessage("Analysis complete! Review the report and choose a target column.");
     } catch {
       setMessage("Uploaded, but could not reach the analysis server.");
     }
@@ -128,8 +148,15 @@ export default function UploadPage() {
     setUploading(false);
   }
 
+  // Helper: choose a color based on score
+  function scoreColor(score: number): string {
+    if (score >= 80) return "#10B981"; // green
+    if (score >= 50) return "#F59E0B"; // amber
+    return "#EF4444"; // red
+  }
+
   return (
-    <main style={{ padding: "40px", fontFamily: "sans-serif", maxWidth: "700px" }}>
+    <main style={{ padding: "40px", fontFamily: "sans-serif", maxWidth: "750px" }}>
       <h1>Upload Dataset</h1>
       <p>Select a CSV file to upload and analyze.</p>
 
@@ -151,66 +178,83 @@ export default function UploadPage() {
 
       {message && <p style={{ marginTop: "20px" }}>{message}</p>}
 
-      {/* Show the profile report if we have one */}
+      {/* Profile report */}
       {report && (
         <div style={{ marginTop: "30px" }}>
           <h2>Dataset Profile</h2>
-          <p>Rows: {report.num_rows}</p>
-          <p>Columns: {report.num_columns}</p>
-          <p>Duplicate rows: {report.duplicate_rows}</p>
-
-          <table
-            style={{
-              marginTop: "15px",
-              borderCollapse: "collapse",
-              width: "100%",
-            }}
-          >
-            <thead>
-              <tr>
-                <th style={cellStyle}>Column</th>
-                <th style={cellStyle}>Type</th>
-                <th style={cellStyle}>Missing</th>
-                <th style={cellStyle}>Unique</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.columns.map((col) => (
-                <tr key={col.name}>
-                  <td style={cellStyle}>{col.name}</td>
-                  <td style={cellStyle}>{col.dtype}</td>
-                  <td style={cellStyle}>{col.missing_values}</td>
-                  <td style={cellStyle}>{col.unique_values}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <p>Rows: {report.num_rows} | Columns: {report.num_columns} | Duplicates: {report.duplicate_rows}</p>
         </div>
       )}
-        {/* Show the cleaning report if we have one */}
+
+      {/* Cleaning report */}
       {cleaning && (
-        <div style={{ marginTop: "30px" }}>
+        <div style={{ marginTop: "25px" }}>
           <h2>Cleaning Report</h2>
-          <p>Rows after cleaning: {cleaning.rows_after_cleaning}</p>
-          <ul style={{ marginTop: "10px" }}>
+          <ul>
             {cleaning.actions.length === 0 ? (
               <li>No issues found. Dataset was already clean!</li>
             ) : (
               cleaning.actions.map((action, index) => (
-                <li key={index} style={{ marginBottom: "6px" }}>
-                  {action}
-                </li>
+                <li key={index} style={{ marginBottom: "6px" }}>{action}</li>
               ))
             )}
           </ul>
         </div>
       )}
+
+      {/* Target selection with confidence scoring */}
+      {targetAnalysis && (
+        <div style={{ marginTop: "30px" }}>
+          <h2>Choose Target Column</h2>
+          <p style={{ color: "#10B981" }}>
+            ⭐ Recommended: <strong>{targetAnalysis.recommended_target}</strong>
+          </p>
+
+          <div style={{ marginTop: "15px" }}>
+            {targetAnalysis.columns.map((col) => (
+              <div
+                key={col.name}
+                onClick={() => setSelectedTarget(col.name)}
+                style={{
+                  border: selectedTarget === col.name ? "2px solid #10B981" : "1px solid #444",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  marginBottom: "10px",
+                  cursor: "pointer",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <strong>
+                    {col.name}
+                    {col.name === targetAnalysis.recommended_target ? " ⭐" : ""}
+                  </strong>
+                  <span style={{ color: scoreColor(col.score) }}>{col.score}%</span>
+                </div>
+
+                {/* Confidence bar */}
+                <div style={{ background: "#222", borderRadius: "4px", height: "8px", marginTop: "8px" }}>
+                  <div
+                    style={{
+                      width: `${col.score}%`,
+                      background: scoreColor(col.score),
+                      height: "100%",
+                      borderRadius: "4px",
+                    }}
+                  />
+                </div>
+
+                <p style={{ fontSize: "13px", color: "#aaa", marginTop: "8px" }}>{col.reason}</p>
+              </div>
+            ))}
+          </div>
+
+          {selectedTarget && (
+            <p style={{ marginTop: "15px" }}>
+              Selected target: <strong>{selectedTarget}</strong>
+            </p>
+          )}
+        </div>
+      )}
     </main>
   );
 }
-
-const cellStyle: React.CSSProperties = {
-  border: "1px solid #444",
-  padding: "8px",
-  textAlign: "left",
-};
