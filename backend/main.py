@@ -1,4 +1,7 @@
+import os
+
 from fastapi import FastAPI, UploadFile, File, Form
+from fastapi.responses import FileResponse
 from profiler import profile_dataset
 from cleaner import clean_dataset
 from target_analyzer import analyze_columns
@@ -67,3 +70,13 @@ async def train(file: UploadFile = File(...), target_column: str = Form(...)):
         f.write(contents)
     report = train_models("temp_train.csv", target_column)
     return report
+@app.get("/download-model")
+def download_model():
+    model_path = "trained_models/best_model.pkl"
+    if not os.path.exists(model_path):
+        return {"error": "No trained model found. Please train a model first."}
+    return FileResponse(
+        path=model_path,
+        filename="best_model.pkl",
+        media_type="application/octet-stream",
+    )

@@ -355,6 +355,27 @@ export default function UploadPage() {
                 🏆 Best model: <strong>{training.best_model}</strong> with{" "}
                 <strong>{training.best_accuracy}%</strong> accuracy.
               </p>
+                            <p style={{ marginTop: "12px" }}>
+                🏆 Best model: <strong>{training.best_model}</strong> with{" "}
+                <strong>{training.best_accuracy}%</strong> accuracy.
+              </p>
+
+              <a
+                href="http://localhost:8000/download-model"
+                style={{
+                  display: "inline-block",
+                  marginTop: "12px",
+                  padding: "12px 24px",
+                  fontSize: "16px",
+                  backgroundColor: "#3B82F6",
+                  color: "white",
+                  borderRadius: "8px",
+                  textDecoration: "none",
+                }}
+              >
+                ⬇️ Download Model (.pkl)
+              </a>
+
             </div>
           )}
         </div>
