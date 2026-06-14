@@ -35,28 +35,30 @@ type TargetColumn = {
 
 type ModelResult = {
   model: string;
-  test_accuracy: number;
-  cv_accuracy: number;
-  train_accuracy: number;
-  health: string;
+  cv_score: number;
+  train_score: number;
 };
 
 type TrainingReport = {
+  problem_type: string;
   target_column: string;
   rows_used: number;
   features_used: string[];
   results: ModelResult[];
   best_model: string;
-  best_accuracy: number;
+  best_score: number;
   detailed_metrics: {
-    accuracy: number;
-    precision: number;
-    recall: number;
-    f1_score: number;
+    accuracy?: number;
+    precision?: number;
+    recall?: number;
+    f1_score?: number;
+    mae?: number;
+    mse?: number;
+    rmse?: number;
+    r2_score?: number;
   };
   model_file: string;
 };
-
 
 type TargetAnalysis = {
   recommended_target: string | null;
@@ -86,6 +88,7 @@ export default function UploadPage() {
     setCleaning(null);
     setTargetAnalysis(null);
     setSelectedTarget("");
+    setTraining(null);
 
     const supabase = createClient();
 
@@ -328,6 +331,26 @@ export default function UploadPage() {
           {training && (
             <div style={{ marginTop: "24px" }}>
               <h2>Training Results</h2>
+
+              {/* Problem Type Badge */}
+              <span
+                style={{
+                  display: "inline-block",
+                  padding: "4px 12px",
+                  borderRadius: "12px",
+                  fontSize: "13px",
+                  fontWeight: "bold",
+                  color: "#fff",
+                  backgroundColor:
+                    training.problem_type === "regression" ? "#8B5CF6" : "#3B82F6",
+                  marginBottom: "12px",
+                }}
+              >
+                {training.problem_type === "regression"
+                  ? "📈 Regression"
+                  : "🎯 Classification"}
+              </span>
+
               <p>
                 Target column: <strong>{training.target_column}</strong> | Rows used:{" "}
                 <strong>{training.rows_used}</strong>
@@ -337,9 +360,8 @@ export default function UploadPage() {
                 <thead>
                   <tr>
                     <th style={{ border: "1px solid #ccc", padding: "8px" }}>Model</th>
-                    <th style={{ border: "1px solid #ccc", padding: "8px" }}>CV Accuracy</th>
-                    <th style={{ border: "1px solid #ccc", padding: "8px" }}>Train Accuracy</th>
-                    <th style={{ border: "1px solid #ccc", padding: "8px" }}>Health</th>
+                    <th style={{ border: "1px solid #ccc", padding: "8px" }}>CV Score</th>
+                    <th style={{ border: "1px solid #ccc", padding: "8px" }}>Train Score</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -356,19 +378,10 @@ export default function UploadPage() {
                         {r.model === training.best_model ? " ⭐ Best" : ""}
                       </td>
                       <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                        {r.cv_accuracy}%
+                        {r.cv_score}%
                       </td>
                       <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                        {r.train_accuracy}%
-                      </td>
-                      <td
-                        style={{
-                          border: "1px solid #ccc",
-                          padding: "8px",
-                          color: r.health === "Healthy" ? "#10B981" : "#EF4444",
-                        }}
-                      >
-                        {r.health}
+                        {r.train_score}%
                       </td>
                     </tr>
                   ))}
@@ -377,9 +390,10 @@ export default function UploadPage() {
 
               <p style={{ marginTop: "12px" }}>
                 🏆 Best model: <strong>{training.best_model}</strong> with{" "}
-                <strong>{training.best_accuracy}%</strong> CV accuracy.
+                <strong>{training.best_score}%</strong> CV score.
               </p>
-{/* Detailed metrics for the best model */}
+
+              {/* Detailed metrics for the best model — problem_type ke hisaab se */}
               <div
                 style={{
                   marginTop: "16px",
@@ -390,37 +404,69 @@ export default function UploadPage() {
               >
                 <h3 style={{ marginTop: 0 }}>Detailed Metrics (Best Model)</h3>
                 <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
-                  <div>
-                    <div style={{ fontSize: "13px", color: "#aaa" }}>Accuracy</div>
-                    <strong style={{ fontSize: "20px" }}>
-                      {training.detailed_metrics.accuracy}%
-                    </strong>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "13px", color: "#aaa" }}>Precision</div>
-                    <strong style={{ fontSize: "20px" }}>
-                      {training.detailed_metrics.precision}%
-                    </strong>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "13px", color: "#aaa" }}>Recall</div>
-                    <strong style={{ fontSize: "20px" }}>
-                      {training.detailed_metrics.recall}%
-                    </strong>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "13px", color: "#aaa" }}>F1 Score</div>
-                    <strong style={{ fontSize: "20px" }}>
-                      {training.detailed_metrics.f1_score}%
-                    </strong>
-                  </div>
+                  {training.problem_type === "classification" ? (
+                    <>
+                      <div>
+                        <div style={{ fontSize: "13px", color: "#aaa" }}>Accuracy</div>
+                        <strong style={{ fontSize: "20px" }}>
+                          {training.detailed_metrics.accuracy}%
+                        </strong>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "13px", color: "#aaa" }}>Precision</div>
+                        <strong style={{ fontSize: "20px" }}>
+                          {training.detailed_metrics.precision}%
+                        </strong>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "13px", color: "#aaa" }}>Recall</div>
+                        <strong style={{ fontSize: "20px" }}>
+                          {training.detailed_metrics.recall}%
+                        </strong>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "13px", color: "#aaa" }}>F1 Score</div>
+                        <strong style={{ fontSize: "20px" }}>
+                          {training.detailed_metrics.f1_score}%
+                        </strong>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <div style={{ fontSize: "13px", color: "#aaa" }}>MAE</div>
+                        <strong style={{ fontSize: "20px" }}>
+                          {training.detailed_metrics.mae}
+                        </strong>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "13px", color: "#aaa" }}>MSE</div>
+                        <strong style={{ fontSize: "20px" }}>
+                          {training.detailed_metrics.mse}
+                        </strong>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "13px", color: "#aaa" }}>RMSE</div>
+                        <strong style={{ fontSize: "20px" }}>
+                          {training.detailed_metrics.rmse}
+                        </strong>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "13px", color: "#aaa" }}>R² Score</div>
+                        <strong style={{ fontSize: "20px" }}>
+                          {training.detailed_metrics.r2_score}
+                        </strong>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
+
               <a
                 href="http://localhost:8000/download-model"
                 style={{
                   display: "inline-block",
-                  marginTop: "12px",
+                  marginTop: "16px",
                   padding: "12px 24px",
                   fontSize: "16px",
                   backgroundColor: "#3B82F6",
