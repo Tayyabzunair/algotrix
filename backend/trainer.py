@@ -4,6 +4,7 @@ import pandas as pd
 
 from sklearn.model_selection import train_test_split, cross_val_score, KFold
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
@@ -19,7 +20,6 @@ from sklearn.metrics import (
 
 def detect_problem_type(y):
     """Decide if this is a classification or regression problem."""
-    # Text target is always classification
     if y.dtype == "object":
         return "classification"
 
@@ -27,15 +27,12 @@ def detect_problem_type(y):
     total_count = len(y)
     all_whole_numbers = (y.dropna() % 1 == 0).all()
 
-    # Decimal values -> regression
     if not all_whole_numbers:
         return "regression"
 
-    # Mostly unique values -> continuous -> regression
     if unique_count / total_count > 0.5:
         return "regression"
 
-    # Few repeated whole-number values -> classification
     if unique_count <= 10:
         return "classification"
 
@@ -50,7 +47,7 @@ def train_models(file_path: str, target_column: str):
     if target_column not in df.columns:
         return {"error": f"Target column '{target_column}' not found in dataset."}
 
-    # 3. Drop rows where the target is missing
+    # 3. Drop rows where the TARGET is missing (target ko impute nahi karte)
     df = df.dropna(subset=[target_column])
 
     # 4. Separate features (X) and target (y)
@@ -71,13 +68,23 @@ def train_models(file_path: str, target_column: str):
     numeric_features = X.select_dtypes(include=["number"]).columns.tolist()
     categorical_features = X.select_dtypes(include=["object"]).columns.tolist()
 
-    # 8. Build a preprocessor:
-    #    - numeric columns  -> StandardScaler
-    #    - categorical cols -> OneHotEncoder
+    # 8. Build mini-pipelines for each column type:
+    #    numeric:     fill missing (median) -> scale
+    #    categorical: fill missing (most frequent) -> one-hot
+    numeric_pipeline = Pipeline(steps=[
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+    ])
+
+    categorical_pipeline = Pipeline(steps=[
+        ("imputer", SimpleImputer(strategy="most_frequent")),
+        ("encoder", OneHotEncoder(handle_unknown="ignore")),
+    ])
+
     preprocessor = ColumnTransformer(
         transformers=[
-            ("num", StandardScaler(), numeric_features),
-            ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features),
+            ("num", numeric_pipeline, numeric_features),
+            ("cat", categorical_pipeline, categorical_features),
         ]
     )
 
@@ -121,20 +128,16 @@ def train_models(file_path: str, target_column: str):
     best_model_name = None
 
     for name, model in models.items():
-        # Pipeline: preprocessing + model bundled together
         pipe = Pipeline(steps=[
             ("preprocessor", preprocessor),
             ("model", model),
         ])
 
-        # Fit on training data only
         pipe.fit(X_train, y_train)
 
-        # Cross-validation runs the WHOLE pipeline on each fold (safe)
         cv_scores = cross_val_score(pipe, X, y, cv=cv_strategy, scoring=scoring)
         cv_score = cv_scores.mean()
 
-        # Train score
         if problem_type == "classification":
             train_score = accuracy_score(y_train, pipe.predict(X_train))
         else:
@@ -146,7 +149,6 @@ def train_models(file_path: str, target_column: str):
             "train_score": round(float(train_score) * 100, 2),
         })
 
-        # Track best model by cv_score
         if cv_score > best_score:
             best_score = cv_score
             best_model_name = name
