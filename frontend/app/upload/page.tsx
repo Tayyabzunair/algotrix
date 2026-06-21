@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
+import Navbar from "../components/Navbar";
+import { Brush, BarChart3, Download } from "lucide-react";
+
 
 type ColumnInfo = {
   name: string;
@@ -70,15 +74,20 @@ type TargetAnalysis = {
   columns: TargetColumn[];
 };
 
-// 🔹 NEW: EDA chart type
 type EdaChart = {
   title: string;
   type: string;
-  image: string; // "data:image/png;base64,..."
+  image: string;
 };
 
 type EdaReport = {
   charts: EdaChart[];
+};
+
+// Animation preset
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0 },
 };
 
 export default function UploadPage() {
@@ -91,8 +100,6 @@ export default function UploadPage() {
   const [selectedTarget, setSelectedTarget] = useState<string>("");
   const [training, setTraining] = useState<TrainingReport | null>(null);
   const [isTraining, setIsTraining] = useState(false);
-
-  // 🔹 NEW: EDA state
   const [eda, setEda] = useState<EdaReport | null>(null);
   const [isEda, setIsEda] = useState(false);
 
@@ -109,7 +116,7 @@ export default function UploadPage() {
     setTargetAnalysis(null);
     setSelectedTarget("");
     setTraining(null);
-    setEda(null); // 🔹 NEW: purane charts clear
+    setEda(null);
 
     const supabase = createClient();
 
@@ -192,7 +199,6 @@ export default function UploadPage() {
     setUploading(false);
   }
 
-  // 🔹 NEW: EDA charts generate karne ka function
   async function handleEda() {
     if (!file) {
       setMessage("Please upload a CSV file first.");
@@ -271,399 +277,470 @@ export default function UploadPage() {
   }
 
   return (
-    <main style={{ padding: "40px", fontFamily: "sans-serif", maxWidth: "750px" }}>
-      <h1>Upload Dataset</h1>
-      <p>Select a CSV file to upload and analyze.</p>
+    <main className="relative min-h-screen bg-grid overflow-hidden">
+      <Navbar />
 
-      <div style={{ marginTop: "20px" }}>
-        <input
-          type="file"
-          accept=".csv"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          style={{ display: "block", marginBottom: "15px" }}
-        />
-        <button
-          onClick={handleUpload}
-          disabled={uploading}
-          style={{ padding: "10px 20px", cursor: "pointer" }}
+      {/* Ambient glow */}
+      <div
+        className="glow-blob"
+        style={{
+          width: "500px",
+          height: "500px",
+          background: "#10b981",
+          top: "-150px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          opacity: 0.25,
+        }}
+      />
+
+      <div className="relative z-10 max-w-4xl mx-auto px-6 pt-32 pb-24">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
         >
-          {uploading ? "Working..." : "Upload & Analyze"}
-        </button>
-      </div>
-
-      {message && <p style={{ marginTop: "20px" }}>{message}</p>}
-
-      {report && (
-        <div style={{ marginTop: "30px" }}>
-          <h2>Dataset Profile</h2>
-          <p>Rows: {report.num_rows} | Columns: {report.num_columns} | Duplicates: {report.duplicate_rows}</p>
-        </div>
-      )}
-
-      {cleaning && (
-        <div style={{ marginTop: "25px" }}>
-          <h2>Cleaning Report</h2>
-          <ul>
-            {cleaning.actions.length === 0 ? (
-              <li>No issues found. Dataset was already clean!</li>
-            ) : (
-              cleaning.actions.map((action, index) => (
-                <li key={index} style={{ marginBottom: "6px" }}>{action}</li>
-              ))
-            )}
-          </ul>
-        </div>
-      )}
-
-      {/* 🔹 NEW: EDA Charts section */}
-      {report && (
-        <div style={{ marginTop: "30px" }}>
-          <h2>Exploratory Data Analysis (EDA)</h2>
-          <p style={{ color: "#aaa", fontSize: "14px" }}>
-            Generate histograms, correlation heatmap, and missing-value charts for your dataset.
+          <h1 className="text-4xl sm:text-5xl font-bold text-gradient">
+            Build a Model
+          </h1>
+          <p className="mt-3 text-[var(--color-ink-muted)]">
+            Upload a CSV and let Algotrix handle the rest — profiling, cleaning,
+            analysis, training, and tuning.
           </p>
+        </motion.div>
+
+        {/* Upload card */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="glass rounded-3xl p-8 mt-8"
+        >
+          <label className="block">
+            <span className="text-sm font-medium text-[var(--color-ink-muted)]">
+              Select your dataset
+            </span>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="mt-3 block w-full text-sm text-[var(--color-ink-muted)]
+                file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0
+                file:text-sm file:font-semibold file:bg-brand-500/10
+                file:text-brand-300 hover:file:bg-brand-500/20
+                file:cursor-pointer cursor-pointer
+                rounded-xl border border-[var(--color-border)] p-3"
+            />
+          </label>
 
           <button
-            onClick={handleEda}
-            disabled={isEda}
-            style={{
-              padding: "12px 24px",
-              fontSize: "16px",
-              backgroundColor: isEda ? "#9CA3AF" : "#3B82F6",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              cursor: isEda ? "not-allowed" : "pointer",
-              marginTop: "8px",
-            }}
+            onClick={handleUpload}
+            disabled={uploading}
+            className={`mt-5 px-6 py-3 rounded-xl font-semibold transition-all ${uploading
+              ? "bg-[var(--color-surface-2)] text-[var(--color-ink-dim)] cursor-not-allowed"
+              : "bg-brand-500 text-black hover:bg-brand-400 hover:shadow-xl hover:shadow-brand-500/30 hover:-translate-y-0.5"
+              }`}
           >
-            {isEda ? "Generating..." : "📊 Generate EDA Charts"}
+            {uploading ? "Working..." : "Upload & Analyze"}
           </button>
 
-          {eda && (
-            <div style={{ marginTop: "20px" }}>
-              {eda.charts.length === 0 ? (
-                <p style={{ color: "#aaa" }}>
-                  No charts could be generated (dataset may have no numeric columns).
-                </p>
-              ) : (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-                    gap: "20px",
-                  }}
-                >
-                  {eda.charts.map((chart, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        border: "1px solid #444",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        backgroundColor: "#1a1a2e",
-                      }}
-                    >
-                      <h4 style={{ margin: "0 0 10px 0", fontSize: "14px" }}>
-                        {chart.title}
-                      </h4>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={chart.image}
-                        alt={chart.title}
+          {message && (
+            <p className="mt-4 text-sm text-[var(--color-ink-muted)]">{message}</p>
+          )}
+        </motion.div>
+
+        {/* Profile + Cleaning bento */}
+        <AnimatePresence>
+          {report && (
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={fadeUp}
+              transition={{ duration: 0.5 }}
+              className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6"
+            >
+              {/* Profile stats */}
+              <div className="glass rounded-3xl p-6 md:col-span-1">
+                <h2 className="text-lg font-bold mb-4">Dataset Profile</h2>
+                <div className="space-y-3">
+                  <Stat label="Rows" value={report.num_rows} />
+                  <Stat label="Columns" value={report.num_columns} />
+                  <Stat label="Duplicates" value={report.duplicate_rows} />
+                </div>
+              </div>
+
+              {/* Cleaning */}
+              {cleaning && (
+                <div className="glass rounded-3xl p-6 md:col-span-2">
+                  <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <Brush className="w-5 h-5 text-brand-400" strokeWidth={1.5} />
+                    Cleaning Report
+                  </h2>
+
+                  {cleaning.actions.length === 0 ? (
+                    <p className="text-sm text-[var(--color-ink-muted)]">
+                      No issues found — your dataset was already clean! ✨
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {cleaning.actions.map((action, i) => (
+                        <li
+                          key={i}
+                          className="text-sm text-[var(--color-ink-muted)] flex items-start gap-2"
+                        >
+                          <span className="text-brand-400 mt-0.5">✓</span>
+                          {action}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* EDA section */}
+        <AnimatePresence>
+          {report && (
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={fadeUp}
+              transition={{ duration: 0.5 }}
+              className="glass rounded-3xl p-8 mt-6"
+            >
+              <h2 className="text-xl font-bold">Exploratory Data Analysis</h2>
+              <p className="mt-2 text-sm text-[var(--color-ink-muted)]">
+                Generate histograms, correlation heatmap, and missing-value charts.
+              </p>
+
+              <button
+                onClick={handleEda}
+                disabled={isEda}
+                className={`mt-5 px-6 py-3 rounded-xl font-semibold transition-all ${isEda
+                  ? "bg-[var(--color-surface-2)] text-[var(--color-ink-dim)] cursor-not-allowed"
+                  : "glass-strong text-[var(--color-ink)] hover:border-brand-400/40 hover:-translate-y-0.5"
+                  }`}
+              >
+                {isEda ? (
+                  "Generating..."
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5" strokeWidth={1.5} />
+                    Generate EDA Charts
+                  </span>
+                )}
+
+              </button>
+
+              {eda && (
+                <div className="mt-6">
+                  {eda.charts.length === 0 ? (
+                    <p className="text-sm text-[var(--color-ink-muted)]">
+                      No charts could be generated (no numeric columns).
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {eda.charts.map((chart, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, scale: 0.96 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.4, delay: i * 0.06 }}
+                          className="glass rounded-2xl p-4"
+                        >
+                          <h4 className="text-sm font-semibold mb-3">
+                            {chart.title}
+                          </h4>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={chart.image}
+                            alt={chart.title}
+                            className="w-full h-auto rounded-lg bg-white"
+                          />
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Target selection */}
+        <AnimatePresence>
+          {targetAnalysis && (
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={fadeUp}
+              transition={{ duration: 0.5 }}
+              className="glass rounded-3xl p-8 mt-6"
+            >
+              <h2 className="text-xl font-bold">Choose Target Column</h2>
+              <p className="mt-2 text-sm text-brand-300">
+                ⭐ Recommended:{" "}
+                <strong>{targetAnalysis.recommended_target}</strong>
+              </p>
+
+              <div className="mt-5 space-y-3">
+                {targetAnalysis.columns.map((col) => (
+                  <div
+                    key={col.name}
+                    onClick={() => setSelectedTarget(col.name)}
+                    className={`rounded-2xl p-4 cursor-pointer transition-all ${selectedTarget === col.name
+                      ? "border-2 border-brand-400 bg-brand-500/5"
+                      : "border border-[var(--color-border)] hover:border-brand-400/30"
+                      }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <strong className="text-[var(--color-ink)]">
+                        {col.name}
+                        {col.name === targetAnalysis.recommended_target ? " ⭐" : ""}
+                      </strong>
+                      <span
+                        className="font-semibold text-sm"
+                        style={{ color: scoreColor(col.score) }}
+                      >
+                        {col.score}%
+                      </span>
+                    </div>
+
+                    <div className="mt-3 h-2 rounded-full bg-[var(--color-surface-2)] overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
                         style={{
-                          width: "100%",
-                          height: "auto",
-                          borderRadius: "4px",
-                          backgroundColor: "#fff",
+                          width: `${col.score}%`,
+                          background: scoreColor(col.score),
                         }}
                       />
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
-      {targetAnalysis && (
-        <div style={{ marginTop: "30px" }}>
-          <h2>Choose Target Column</h2>
-          <p style={{ color: "#10B981" }}>
-            ⭐ Recommended: <strong>{targetAnalysis.recommended_target}</strong>
-          </p>
-
-          <div style={{ marginTop: "15px" }}>
-            {targetAnalysis.columns.map((col) => (
-              <div
-                key={col.name}
-                onClick={() => setSelectedTarget(col.name)}
-                style={{
-                  border: selectedTarget === col.name ? "2px solid #10B981" : "1px solid #444",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  marginBottom: "10px",
-                  cursor: "pointer",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <strong>
-                    {col.name}
-                    {col.name === targetAnalysis.recommended_target ? " ⭐" : ""}
-                  </strong>
-                  <span style={{ color: scoreColor(col.score) }}>{col.score}%</span>
-                </div>
-
-                <div style={{ background: "#222", borderRadius: "4px", height: "8px", marginTop: "8px" }}>
-                  <div
-                    style={{
-                      width: `${col.score}%`,
-                      background: scoreColor(col.score),
-                      height: "100%",
-                      borderRadius: "4px",
-                    }}
-                  />
-                </div>
-
-                <p style={{ fontSize: "13px", color: "#aaa", marginTop: "8px" }}>{col.reason}</p>
+                    <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
+                      {col.reason}
+                    </p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          {selectedTarget && (
-            <p style={{ marginTop: "15px" }}>
-              Selected target: <strong>{selectedTarget}</strong>
-            </p>
-          )}
-
-          {selectedTarget && (
-            <div style={{ marginTop: "24px" }}>
-              <button
-                onClick={handleTrain}
-                disabled={isTraining}
-                style={{
-                  padding: "12px 24px",
-                  fontSize: "16px",
-                  backgroundColor: isTraining ? "#9CA3AF" : "#10B981",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: isTraining ? "not-allowed" : "pointer",
-                }}
-              >
-                {isTraining ? "Training..." : `Train Model on "${selectedTarget}"`}
-              </button>
-            </div>
-          )}
-
-          {training && (
-            <div style={{ marginTop: "24px" }}>
-              <h2>Training Results</h2>
-
-              {/* Problem Type Badge */}
-              <span
-                style={{
-                  display: "inline-block",
-                  padding: "4px 12px",
-                  borderRadius: "12px",
-                  fontSize: "13px",
-                  fontWeight: "bold",
-                  color: "#fff",
-                  backgroundColor:
-                    training.problem_type === "regression" ? "#8B5CF6" : "#3B82F6",
-                  marginBottom: "12px",
-                }}
-              >
-                {training.problem_type === "regression"
-                  ? "📈 Regression"
-                  : "🎯 Classification"}
-              </span>
-
-              <p>
-                Target column: <strong>{training.target_column}</strong> | Rows used:{" "}
-                <strong>{training.rows_used}</strong>
-              </p>
-
-              <table style={{ borderCollapse: "collapse", marginTop: "12px", width: "100%" }}>
-                <thead>
-                  <tr>
-                    <th style={{ border: "1px solid #ccc", padding: "8px" }}>Model</th>
-                    <th style={{ border: "1px solid #ccc", padding: "8px" }}>CV Score</th>
-                    <th style={{ border: "1px solid #ccc", padding: "8px" }}>Train Score</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {training.results.map((r) => (
-                    <tr
-                      key={r.model}
-                      style={{
-                        backgroundColor:
-                          r.model === training.best_model ? "#D1FAE5" : "transparent",
-                        color:
-                          r.model === training.best_model ? "#064E3B" : "inherit",
-                      }}
-                    >
-                      <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                        {r.model}
-                        {r.model === training.best_model ? " ⭐ Best" : ""}
-                      </td>
-                      <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                        {r.cv_score}%
-                      </td>
-                      <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                        {r.train_score}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <p style={{ marginTop: "12px" }}>
-                🏆 Best model: <strong>{training.best_model}</strong> with{" "}
-                <strong>{training.best_score}%</strong> CV score.
-              </p>
-
-              {/* Hyperparameter Tuning Info */}
-              {training.tuning && (
-                <div
-                  style={{
-                    marginTop: "16px",
-                    padding: "16px",
-                    border: "1px solid #444",
-                    borderRadius: "8px",
-                    backgroundColor: "#1a1a2e",
-                  }}
+              {selectedTarget && (
+                <button
+                  onClick={handleTrain}
+                  disabled={isTraining}
+                  className={`mt-6 px-7 py-3.5 rounded-xl font-semibold transition-all ${isTraining
+                    ? "bg-[var(--color-surface-2)] text-[var(--color-ink-dim)] cursor-not-allowed"
+                    : "bg-brand-500 text-black hover:bg-brand-400 hover:shadow-xl hover:shadow-brand-500/30 hover:-translate-y-0.5"
+                    }`}
                 >
-                  <h3 style={{ marginTop: 0 }}>⚙️ Hyperparameter Tuning</h3>
-                  <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", marginBottom: "10px" }}>
+                  {isTraining
+                    ? "Training..."
+                    : `Train Model on "${selectedTarget}"`}
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Training results */}
+        <AnimatePresence>
+          {training && (
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={fadeUp}
+              transition={{ duration: 0.5 }}
+              className="mt-6 space-y-6"
+            >
+              {/* Header + badge */}
+              <div className="glass rounded-3xl p-8">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <h2 className="text-2xl font-bold text-gradient">
+                    Training Results
+                  </h2>
+                  <span
+                    className="px-4 py-1.5 rounded-full text-xs font-bold text-black"
+                    style={{
+                      background:
+                        training.problem_type === "regression"
+                          ? "#8B5CF6"
+                          : "#10b981",
+                    }}
+                  >
+                    {training.problem_type === "regression"
+                      ? "📈 Regression"
+                      : "🎯 Classification"}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm text-[var(--color-ink-muted)]">
+                  Target: <strong className="text-[var(--color-ink)]">{training.target_column}</strong>{" "}
+                  · Rows used:{" "}
+                  <strong className="text-[var(--color-ink)]">{training.rows_used}</strong>
+                </p>
+
+                {/* Models table */}
+                <div className="mt-6 overflow-hidden rounded-2xl border border-[var(--color-border)]">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-[var(--color-surface-2)] text-left">
+                        <th className="px-4 py-3 font-semibold">Model</th>
+                        <th className="px-4 py-3 font-semibold">CV Score</th>
+                        <th className="px-4 py-3 font-semibold">Train Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {training.results.map((r) => {
+                        const isBest = r.model === training.best_model;
+                        return (
+                          <tr
+                            key={r.model}
+                            className={`border-t border-[var(--color-border)] ${isBest ? "bg-brand-500/10" : ""
+                              }`}
+                          >
+                            <td
+                              className={`px-4 py-3 ${isBest
+                                ? "text-brand-300 font-semibold"
+                                : "text-[var(--color-ink-muted)]"
+                                }`}
+                            >
+                              {r.model}
+                              {isBest ? " ⭐ Best" : ""}
+                            </td>
+                            <td className="px-4 py-3 text-[var(--color-ink)]">
+                              {r.cv_score}%
+                            </td>
+                            <td className="px-4 py-3 text-[var(--color-ink-muted)]">
+                              {r.train_score}%
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <p className="mt-4 text-sm">
+                  🏆 Best model:{" "}
+                  <strong className="text-brand-300">{training.best_model}</strong>{" "}
+                  with{" "}
+                  <strong className="text-brand-300">{training.best_score}%</strong>{" "}
+                  CV score.
+                </p>
+              </div>
+
+              {/* Hyperparameter tuning */}
+              {training.tuning && (
+                <div className="glass rounded-3xl p-8">
+                  <h3 className="text-lg font-bold mb-5">
+                    ⚙️ Hyperparameter Tuning
+                  </h3>
+                  <div className="flex gap-8 flex-wrap">
                     <div>
-                      <div style={{ fontSize: "13px", color: "#aaa" }}>Before Tuning</div>
-                      <strong style={{ fontSize: "20px" }}>
+                      <div className="text-xs text-[var(--color-ink-muted)]">
+                        Before Tuning
+                      </div>
+                      <div className="text-2xl font-bold mt-1">
                         {training.tuning.default_score}%
-                      </strong>
+                      </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: "13px", color: "#aaa" }}>After Tuning</div>
-                      <strong
+                      <div className="text-xs text-[var(--color-ink-muted)]">
+                        After Tuning
+                      </div>
+                      <div
+                        className="text-2xl font-bold mt-1"
                         style={{
-                          fontSize: "20px",
                           color:
-                            training.tuning.tuned_score > training.tuning.default_score
-                              ? "#10B981"
-                              : "inherit",
+                            training.tuning.tuned_score >
+                              training.tuning.default_score
+                              ? "#34d399"
+                              : "var(--color-ink)",
                         }}
                       >
                         {training.tuning.tuned_score}%
-                        {training.tuning.tuned_score > training.tuning.default_score
+                        {training.tuning.tuned_score >
+                          training.tuning.default_score
                           ? " ▲"
                           : ""}
-                      </strong>
+                      </div>
                     </div>
                   </div>
                   {Object.keys(training.tuning.best_params).length > 0 ? (
-                    <div style={{ fontSize: "14px" }}>
-                      <span style={{ color: "#aaa" }}>Best settings: </span>
+                    <div className="mt-5 text-sm">
+                      <span className="text-[var(--color-ink-muted)]">
+                        Best settings:{" "}
+                      </span>
                       {Object.entries(training.tuning.best_params)
                         .map(([k, v]) => `${k} = ${v}`)
                         .join(", ")}
                     </div>
                   ) : (
-                    <div style={{ fontSize: "14px", color: "#aaa" }}>
+                    <p className="mt-5 text-sm text-[var(--color-ink-muted)]">
                       This model has no tunable settings.
-                    </div>
+                    </p>
                   )}
                 </div>
               )}
 
-              {/* Detailed metrics for the best model — problem_type ke hisaab se */}
-              <div
-                style={{
-                  marginTop: "16px",
-                  padding: "16px",
-                  border: "1px solid #444",
-                  borderRadius: "8px",
-                }}
-              >
-                <h3 style={{ marginTop: 0 }}>Detailed Metrics (Best Model)</h3>
-                <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
+              {/* Detailed metrics */}
+              <div className="glass rounded-3xl p-8">
+                <h3 className="text-lg font-bold mb-5">
+                  Detailed Metrics (Best Model)
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {training.problem_type === "classification" ? (
                     <>
-                      <div>
-                        <div style={{ fontSize: "13px", color: "#aaa" }}>Accuracy</div>
-                        <strong style={{ fontSize: "20px" }}>
-                          {training.detailed_metrics.accuracy}%
-                        </strong>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "13px", color: "#aaa" }}>Precision</div>
-                        <strong style={{ fontSize: "20px" }}>
-                          {training.detailed_metrics.precision}%
-                        </strong>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "13px", color: "#aaa" }}>Recall</div>
-                        <strong style={{ fontSize: "20px" }}>
-                          {training.detailed_metrics.recall}%
-                        </strong>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "13px", color: "#aaa" }}>F1 Score</div>
-                        <strong style={{ fontSize: "20px" }}>
-                          {training.detailed_metrics.f1_score}%
-                        </strong>
-                      </div>
+                      <Metric label="Accuracy" value={`${training.detailed_metrics.accuracy}%`} />
+                      <Metric label="Precision" value={`${training.detailed_metrics.precision}%`} />
+                      <Metric label="Recall" value={`${training.detailed_metrics.recall}%`} />
+                      <Metric label="F1 Score" value={`${training.detailed_metrics.f1_score}%`} />
                     </>
                   ) : (
                     <>
-                      <div>
-                        <div style={{ fontSize: "13px", color: "#aaa" }}>MAE</div>
-                        <strong style={{ fontSize: "20px" }}>
-                          {training.detailed_metrics.mae}
-                        </strong>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "13px", color: "#aaa" }}>MSE</div>
-                        <strong style={{ fontSize: "20px" }}>
-                          {training.detailed_metrics.mse}
-                        </strong>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "13px", color: "#aaa" }}>RMSE</div>
-                        <strong style={{ fontSize: "20px" }}>
-                          {training.detailed_metrics.rmse}
-                        </strong>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "13px", color: "#aaa" }}>R² Score</div>
-                        <strong style={{ fontSize: "20px" }}>
-                          {training.detailed_metrics.r2_score}
-                        </strong>
-                      </div>
+                      <Metric label="MAE" value={training.detailed_metrics.mae} />
+                      <Metric label="MSE" value={training.detailed_metrics.mse} />
+                      <Metric label="RMSE" value={training.detailed_metrics.rmse} />
+                      <Metric label="R² Score" value={training.detailed_metrics.r2_score} />
                     </>
                   )}
                 </div>
-              </div>
 
-              <a
-                href="http://localhost:8000/download-model"
-                style={{
-                  display: "inline-block",
-                  marginTop: "16px",
-                  padding: "12px 24px",
-                  fontSize: "16px",
-                  backgroundColor: "#3B82F6",
-                  color: "white",
-                  borderRadius: "8px",
-                  textDecoration: "none",
-                }}
-              >
-                ⬇️ Download Model (.pkl)
-              </a>
-            </div>
+                <a
+                  href="http://localhost:8000/download-model"
+                  className="inline-block mt-7 px-7 py-3.5 rounded-xl bg-brand-500 text-black font-semibold hover:bg-brand-400 transition-all hover:shadow-xl hover:shadow-brand-500/30 hover:-translate-y-0.5"
+                >
+                  <span className="flex items-center gap-2">
+                    <Download className="w-5 h-5" strokeWidth={1.5} />
+                    Download Model (.pkl)
+                  </span>
+
+                </a>
+              </div>
+            </motion.div>
           )}
-        </div>
-      )}
+        </AnimatePresence>
+      </div>
     </main>
+  );
+}
+
+/* ---------- Small reusable bits ---------- */
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex justify-between items-center">
+      <span className="text-sm text-[var(--color-ink-muted)]">{label}</span>
+      <span className="text-lg font-bold text-[var(--color-ink)]">{value}</span>
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string | number | undefined }) {
+  return (
+    <div className="glass-strong rounded-2xl p-4 text-center">
+      <div className="text-xs text-[var(--color-ink-muted)]">{label}</div>
+      <div className="text-xl font-bold mt-1 text-[var(--color-ink)]">{value}</div>
+    </div>
   );
 }
