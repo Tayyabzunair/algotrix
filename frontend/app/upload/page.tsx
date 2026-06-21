@@ -47,6 +47,11 @@ type TrainingReport = {
   results: ModelResult[];
   best_model: string;
   best_score: number;
+  tuning: {
+    default_score: number;
+    tuned_score: number;
+    best_params: Record<string, string | number | null>;
+  };
   detailed_metrics: {
     accuracy?: number;
     precision?: number;
@@ -371,6 +376,8 @@ export default function UploadPage() {
                       style={{
                         backgroundColor:
                           r.model === training.best_model ? "#D1FAE5" : "transparent",
+                        color:
+                          r.model === training.best_model ? "#064E3B" : "inherit",
                       }}
                     >
                       <td style={{ border: "1px solid #ccc", padding: "8px" }}>
@@ -392,6 +399,58 @@ export default function UploadPage() {
                 🏆 Best model: <strong>{training.best_model}</strong> with{" "}
                 <strong>{training.best_score}%</strong> CV score.
               </p>
+
+              {/* Hyperparameter Tuning Info */}
+              {training.tuning && (
+                <div
+                  style={{
+                    marginTop: "16px",
+                    padding: "16px",
+                    border: "1px solid #444",
+                    borderRadius: "8px",
+                    backgroundColor: "#1a1a2e",
+                  }}
+                >
+                  <h3 style={{ marginTop: 0 }}>⚙️ Hyperparameter Tuning</h3>
+                  <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", marginBottom: "10px" }}>
+                    <div>
+                      <div style={{ fontSize: "13px", color: "#aaa" }}>Before Tuning</div>
+                      <strong style={{ fontSize: "20px" }}>
+                        {training.tuning.default_score}%
+                      </strong>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "13px", color: "#aaa" }}>After Tuning</div>
+                      <strong
+                        style={{
+                          fontSize: "20px",
+                          color:
+                            training.tuning.tuned_score > training.tuning.default_score
+                              ? "#10B981"
+                              : "inherit",
+                        }}
+                      >
+                        {training.tuning.tuned_score}%
+                        {training.tuning.tuned_score > training.tuning.default_score
+                          ? " ▲"
+                          : ""}
+                      </strong>
+                    </div>
+                  </div>
+                  {Object.keys(training.tuning.best_params).length > 0 ? (
+                    <div style={{ fontSize: "14px" }}>
+                      <span style={{ color: "#aaa" }}>Best settings: </span>
+                      {Object.entries(training.tuning.best_params)
+                        .map(([k, v]) => `${k} = ${v}`)
+                        .join(", ")}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: "14px", color: "#aaa" }}>
+                      This model has no tunable settings.
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Detailed metrics for the best model — problem_type ke hisaab se */}
               <div

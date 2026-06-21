@@ -2,7 +2,7 @@ import os
 import joblib
 import pandas as pd
 
-from sklearn.model_selection import train_test_split, cross_val_score, KFold
+from sklearn.model_selection import train_test_split, cross_val_score, KFold, GridSearchCV
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
@@ -19,81 +19,81 @@ from sklearn.metrics import (
 
 
 def detect_problem_type(y):
-    """Decide if this is a classification or regression problem."""
     if y.dtype == "object":
         return "classification"
-
     unique_count = y.nunique()
     total_count = len(y)
     all_whole_numbers = (y.dropna() % 1 == 0).all()
-
     if not all_whole_numbers:
         return "regression"
-
     if unique_count / total_count > 0.5:
         return "regression"
-
     if unique_count <= 10:
         return "classification"
-
     return "regression"
 
 
+# Hyperparameter grids for each model.
+# Keys use "model__" prefix because the model is a step named "model" inside the Pipeline.
+PARAM_GRIDS = {
+    "Logistic Regression": {"model__C": [0.1, 1, 10]},
+    "Linear Regression": {},  # nothing useful to tune
+    "Decision Tree": {"model__max_depth": [3, 5, 10, None]},
+    "Random Forest": {
+        "model__n_estimators": [50, 100, 200],
+        "model__max_depth": [5, 10, None],
+    },
+}
+
+
 def train_models(file_path: str, target_column: str):
-    # 1. Load the dataset
+    # 1. Load
     df = pd.read_csv(file_path)
 
-    # 2. Check target column exists
+    # 2. Check target
     if target_column not in df.columns:
         return {"error": f"Target column '{target_column}' not found in dataset."}
 
-    # 3. Drop rows where the TARGET is missing (target ko impute nahi karte)
+    # 3. Drop rows with missing target
     df = df.dropna(subset=[target_column])
 
-    # 4. Separate features (X) and target (y)
+    # 4. X / y
     X = df.drop(columns=[target_column])
     y = df[target_column]
 
-    # 5. Detect problem type
+    # 5. Problem type
     problem_type = detect_problem_type(y)
 
-    # 6. Encode the target ONLY for classification (if it's text)
-    target_encoder = None
+    # 6. Encode target for classification (if text)
     if problem_type == "classification" and y.dtype == "object":
         from sklearn.preprocessing import LabelEncoder
         target_encoder = LabelEncoder()
         y = pd.Series(target_encoder.fit_transform(y), index=y.index)
 
-    # 7. Identify numeric vs categorical feature columns
+    # 7. Numeric vs categorical
     numeric_features = X.select_dtypes(include=["number"]).columns.tolist()
     categorical_features = X.select_dtypes(include=["object"]).columns.tolist()
 
-    # 8. Build mini-pipelines for each column type:
-    #    numeric:     fill missing (median) -> scale
-    #    categorical: fill missing (most frequent) -> one-hot
+    # 8. Preprocessor (impute -> scale / one-hot)
     numeric_pipeline = Pipeline(steps=[
         ("imputer", SimpleImputer(strategy="median")),
         ("scaler", StandardScaler()),
     ])
-
     categorical_pipeline = Pipeline(steps=[
         ("imputer", SimpleImputer(strategy="most_frequent")),
         ("encoder", OneHotEncoder(handle_unknown="ignore")),
     ])
+    preprocessor = ColumnTransformer(transformers=[
+        ("num", numeric_pipeline, numeric_features),
+        ("cat", categorical_pipeline, categorical_features),
+    ])
 
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ("num", numeric_pipeline, numeric_features),
-            ("cat", categorical_pipeline, categorical_features),
-        ]
-    )
-
-    # 9. Train/test split
+    # 9. Split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
 
-    # 10. Choose models + scoring based on problem type
+    # 10. Models + scoring
     if problem_type == "classification":
         models = {
             "Logistic Regression": LogisticRegression(max_iter=1000),
@@ -109,7 +109,7 @@ def train_models(file_path: str, target_column: str):
         }
         scoring = "r2"
 
-    # 11. Set up cross-validation strategy
+    # 11. CV strategy
     if problem_type == "classification":
         smallest_class = pd.Series(y).value_counts().min()
         cv_folds = min(5, smallest_class)
@@ -122,7 +122,7 @@ def train_models(file_path: str, target_column: str):
             cv_folds = 2
         cv_strategy = KFold(n_splits=cv_folds, shuffle=True, random_state=42)
 
-    # 12. Train + evaluate each model inside a Pipeline (no data leakage)
+    # 12. Train + evaluate each model (default settings) to find the best
     results = []
     best_score = -999999
     best_model_name = None
@@ -132,9 +132,7 @@ def train_models(file_path: str, target_column: str):
             ("preprocessor", preprocessor),
             ("model", model),
         ])
-
         pipe.fit(X_train, y_train)
-
         cv_scores = cross_val_score(pipe, X, y, cv=cv_strategy, scoring=scoring)
         cv_score = cv_scores.mean()
 
@@ -153,11 +151,34 @@ def train_models(file_path: str, target_column: str):
             best_score = cv_score
             best_model_name = name
 
-    # 13. Build the best pipeline, get detailed metrics on the test set
-    best_pipe = Pipeline(steps=[
+    # 13. HYPERPARAMETER TUNING on the best model only (for speed)
+    default_score = round(float(best_score) * 100, 2)
+    param_grid = PARAM_GRIDS.get(best_model_name, {})
+
+    tuned_pipe = Pipeline(steps=[
         ("preprocessor", preprocessor),
         ("model", models[best_model_name]),
     ])
+
+    if param_grid:
+        grid = GridSearchCV(
+            tuned_pipe,
+            param_grid=param_grid,
+            cv=cv_strategy,
+            scoring=scoring,
+        )
+        grid.fit(X, y)
+        best_pipe = grid.best_estimator_
+        tuned_score = round(float(grid.best_score_) * 100, 2)
+        best_params = {k.replace("model__", ""): v for k, v in grid.best_params_.items()}
+    else:
+        # Nothing to tune (e.g. Linear Regression)
+        tuned_pipe.fit(X, y)
+        best_pipe = tuned_pipe
+        tuned_score = default_score
+        best_params = {}
+
+    # 14. Detailed metrics on the test set (using tuned best model)
     best_pipe.fit(X_train, y_train)
     predictions = best_pipe.predict(X_test)
 
@@ -177,18 +198,13 @@ def train_models(file_path: str, target_column: str):
             "r2_score": round(r2_score(y_test, predictions), 4),
         }
 
-    # 14. Retrain best pipeline on ALL data and save
-    final_pipe = Pipeline(steps=[
-        ("preprocessor", preprocessor),
-        ("model", models[best_model_name]),
-    ])
-    final_pipe.fit(X, y)
-
+    # 15. Retrain tuned best model on ALL data and save
+    best_pipe.fit(X, y)
     os.makedirs("trained_models", exist_ok=True)
     model_filename = "trained_models/best_model.pkl"
-    joblib.dump(final_pipe, model_filename)
+    joblib.dump(best_pipe, model_filename)
 
-    # 15. Return the report
+    # 16. Return report (now with tuning info)
     return {
         "problem_type": problem_type,
         "target_column": target_column,
@@ -196,7 +212,12 @@ def train_models(file_path: str, target_column: str):
         "features_used": list(X.columns),
         "results": results,
         "best_model": best_model_name,
-        "best_score": round(float(best_score) * 100, 2),
+        "best_score": tuned_score,
+        "tuning": {
+            "default_score": default_score,
+            "tuned_score": tuned_score,
+            "best_params": best_params,
+        },
         "detailed_metrics": detailed_metrics,
         "model_file": model_filename,
     }
