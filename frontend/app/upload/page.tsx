@@ -70,6 +70,17 @@ type TargetAnalysis = {
   columns: TargetColumn[];
 };
 
+// 🔹 NEW: EDA chart type
+type EdaChart = {
+  title: string;
+  type: string;
+  image: string; // "data:image/png;base64,..."
+};
+
+type EdaReport = {
+  charts: EdaChart[];
+};
+
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
@@ -80,6 +91,10 @@ export default function UploadPage() {
   const [selectedTarget, setSelectedTarget] = useState<string>("");
   const [training, setTraining] = useState<TrainingReport | null>(null);
   const [isTraining, setIsTraining] = useState(false);
+
+  // 🔹 NEW: EDA state
+  const [eda, setEda] = useState<EdaReport | null>(null);
+  const [isEda, setIsEda] = useState(false);
 
   async function handleUpload() {
     if (!file) {
@@ -94,6 +109,7 @@ export default function UploadPage() {
     setTargetAnalysis(null);
     setSelectedTarget("");
     setTraining(null);
+    setEda(null); // 🔹 NEW: purane charts clear
 
     const supabase = createClient();
 
@@ -174,6 +190,42 @@ export default function UploadPage() {
     }
 
     setUploading(false);
+  }
+
+  // 🔹 NEW: EDA charts generate karne ka function
+  async function handleEda() {
+    if (!file) {
+      setMessage("Please upload a CSV file first.");
+      return;
+    }
+
+    setIsEda(true);
+    setEda(null);
+    setMessage("Generating charts... this may take a moment.");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("http://localhost:8000/eda", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        setMessage("Could not generate charts. Please check the backend server.");
+        setIsEda(false);
+        return;
+      }
+
+      const data: EdaReport = await res.json();
+      setEda(data);
+      setMessage("Charts ready! Scroll down to view your EDA.");
+    } catch {
+      setMessage("Could not reach the EDA server. Is it running?");
+    }
+
+    setIsEda(false);
   }
 
   async function handleTrain() {
@@ -260,6 +312,78 @@ export default function UploadPage() {
               ))
             )}
           </ul>
+        </div>
+      )}
+
+      {/* 🔹 NEW: EDA Charts section */}
+      {report && (
+        <div style={{ marginTop: "30px" }}>
+          <h2>Exploratory Data Analysis (EDA)</h2>
+          <p style={{ color: "#aaa", fontSize: "14px" }}>
+            Generate histograms, correlation heatmap, and missing-value charts for your dataset.
+          </p>
+
+          <button
+            onClick={handleEda}
+            disabled={isEda}
+            style={{
+              padding: "12px 24px",
+              fontSize: "16px",
+              backgroundColor: isEda ? "#9CA3AF" : "#3B82F6",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: isEda ? "not-allowed" : "pointer",
+              marginTop: "8px",
+            }}
+          >
+            {isEda ? "Generating..." : "📊 Generate EDA Charts"}
+          </button>
+
+          {eda && (
+            <div style={{ marginTop: "20px" }}>
+              {eda.charts.length === 0 ? (
+                <p style={{ color: "#aaa" }}>
+                  No charts could be generated (dataset may have no numeric columns).
+                </p>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                    gap: "20px",
+                  }}
+                >
+                  {eda.charts.map((chart, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        border: "1px solid #444",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        backgroundColor: "#1a1a2e",
+                      }}
+                    >
+                      <h4 style={{ margin: "0 0 10px 0", fontSize: "14px" }}>
+                        {chart.title}
+                      </h4>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={chart.image}
+                        alt={chart.title}
+                        style={{
+                          width: "100%",
+                          height: "auto",
+                          borderRadius: "4px",
+                          backgroundColor: "#fff",
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

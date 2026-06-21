@@ -1,5 +1,6 @@
 import os
 
+from eda import generate_eda
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from profiler import profile_dataset
@@ -80,3 +81,10 @@ def download_model():
         filename="best_model.pkl",
         media_type="application/octet-stream",
     )
+@app.post("/eda")
+async def eda(file: UploadFile = File(...)):
+    contents = await file.read()
+    with open("temp_eda.csv", "wb") as f:
+        f.write(contents)
+    report = generate_eda("temp_eda.csv")
+    return report
