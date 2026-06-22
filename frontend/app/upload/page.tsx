@@ -94,7 +94,7 @@ const fadeUp = {
 };
 
 export default function UploadPage() {
-  const router = useRouter(); // ✅ NEW
+  const router = useRouter();
   const { showToast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
@@ -108,7 +108,6 @@ export default function UploadPage() {
   const [eda, setEda] = useState<EdaReport | null>(null);
   const [isEda, setIsEda] = useState(false);
 
-  // ✅ NEW — protect this page: logged-out users redirect to /login
   useEffect(() => {
     async function checkAuth() {
       const supabase = createClient();
@@ -125,6 +124,7 @@ export default function UploadPage() {
   async function handleUpload() {
     if (!file) {
       setMessage("Please select a CSV file first.");
+      showToast("Please select a CSV file first.", "error");
       return;
     }
 
@@ -145,6 +145,7 @@ export default function UploadPage() {
 
     if (!user) {
       setMessage("You must be logged in to upload.");
+      showToast("You must be logged in to upload.", "error");
       setUploading(false);
       return;
     }
@@ -157,6 +158,7 @@ export default function UploadPage() {
 
     if (error) {
       setMessage("Upload failed: " + error.message);
+      showToast("Upload failed. Please try again.", "error");
       setUploading(false);
       return;
     }
@@ -169,11 +171,13 @@ export default function UploadPage() {
 
     if (dbError) {
       setMessage("File uploaded but record failed: " + dbError.message);
+      showToast("File uploaded but record failed.", "error");
       setUploading(false);
       return;
     }
 
     setMessage("File uploaded. Analyzing...");
+    showToast("File uploaded! Analyzing your data...", "info");
 
     try {
       const profileForm = new FormData();
@@ -211,8 +215,10 @@ export default function UploadPage() {
       }
 
       setMessage("Analysis complete! Review the report and choose a target column.");
+      showToast("Analysis complete! Choose a target column.", "success");
     } catch {
       setMessage("Uploaded, but could not reach the analysis server.");
+      showToast("Could not reach the analysis server.", "error");
     }
 
     setUploading(false);
@@ -221,6 +227,7 @@ export default function UploadPage() {
   async function handleEda() {
     if (!file) {
       setMessage("Please upload a CSV file first.");
+      showToast("Please upload a CSV file first.", "error");
       return;
     }
 
@@ -239,6 +246,7 @@ export default function UploadPage() {
 
       if (!res.ok) {
         setMessage("Could not generate charts. Please check the backend server.");
+        showToast("Could not generate charts.", "error");
         setIsEda(false);
         return;
       }
@@ -246,8 +254,10 @@ export default function UploadPage() {
       const data: EdaReport = await res.json();
       setEda(data);
       setMessage("Charts ready! Scroll down to view your EDA.");
+      showToast("Charts ready! Scroll down to view your EDA.", "success");
     } catch {
       setMessage("Could not reach the EDA server. Is it running?");
+      showToast("Could not reach the EDA server.", "error");
     }
 
     setIsEda(false);
@@ -256,12 +266,14 @@ export default function UploadPage() {
   async function handleTrain() {
     if (!file || !selectedTarget) {
       setMessage("Please select a target column first.");
+      showToast("Please select a target column first.", "error");
       return;
     }
 
     setIsTraining(true);
     setTraining(null);
     setMessage("Training models... this may take a moment.");
+    showToast("Training models... this may take a moment.", "info");
 
     try {
       const formData = new FormData();
@@ -275,6 +287,7 @@ export default function UploadPage() {
 
       if (!res.ok) {
         setMessage("Training failed. Please check the backend server.");
+        showToast("Training failed. Check the backend server.", "error");
         setIsTraining(false);
         return;
       }
@@ -282,8 +295,10 @@ export default function UploadPage() {
       const data: TrainingReport = await res.json();
       setTraining(data);
       setMessage("Training complete! Here are your results.");
+      showToast("Training complete! 🎉", "success");
     } catch {
       setMessage("Could not reach the training server. Is it running?");
+      showToast("Could not reach the training server.", "error");
     }
 
     setIsTraining(false);
@@ -500,64 +515,131 @@ export default function UploadPage() {
               className="glass rounded-3xl p-8 mt-6"
             >
               <h2 className="text-xl font-bold">Choose Target Column</h2>
-              <p className="mt-2 text-sm text-brand-300">
-                ⭐ Recommended:{" "}
-                <strong>{targetAnalysis.recommended_target}</strong>
+              <p className="mt-2 text-sm text-[var(--color-ink-muted)]">
+                Algotrix recommends the best column to predict. Pick one to start training.
               </p>
 
-              <div className="mt-5 space-y-3">
-                {targetAnalysis.columns.map((col) => (
-                  <div
-                    key={col.name}
-                    onClick={() => setSelectedTarget(col.name)}
-                    className={`rounded-2xl p-4 cursor-pointer transition-all ${selectedTarget === col.name
-                      ? "border-2 border-brand-400 bg-brand-500/5"
-                      : "border border-[var(--color-border)] hover:border-brand-400/30"
+              <div className="mt-6 space-y-3">
+                {targetAnalysis.columns.map((col, i) => {
+                  const isSelected = selectedTarget === col.name;
+                  const isRecommended = col.name === targetAnalysis.recommended_target;
+                  const scoreLabel =
+                    col.score >= 80 ? "Excellent" : col.score >= 50 ? "Good" : "Weak";
+
+                  return (
+                    <motion.div
+                      key={col.name}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.35, delay: i * 0.05 }}
+                      whileHover={{ y: -3 }}
+                      onClick={() => setSelectedTarget(col.name)}
+                      className={`relative rounded-2xl p-5 cursor-pointer transition-all ${
+                        isSelected
+                          ? "border-2 border-brand-400 bg-brand-500/[0.07] shadow-lg shadow-brand-500/10"
+                          : "border border-[var(--color-border)] hover:border-brand-400/40"
                       }`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <strong className="text-[var(--color-ink)]">
-                        {col.name}
-                        {col.name === targetAnalysis.recommended_target ? " ⭐" : ""}
-                      </strong>
-                      <span
-                        className="font-semibold text-sm"
-                        style={{ color: scoreColor(col.score) }}
-                      >
-                        {col.score}%
-                      </span>
-                    </div>
+                    >
+                      {/* Top row: name + checkbox */}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          {/* Radio / check indicator */}
+                          <span
+                            className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                              isSelected
+                                ? "border-brand-400 bg-brand-400"
+                                : "border-[var(--color-ink-dim)]"
+                            }`}
+                          >
+                            {isSelected && (
+                              <svg className="w-3 h-3 text-black" viewBox="0 0 12 12" fill="none">
+                                <path d="M2 6l2.5 2.5L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            )}
+                          </span>
 
-                    <div className="mt-3 h-2 rounded-full bg-[var(--color-surface-2)] overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${col.score}%`,
-                          background: scoreColor(col.score),
-                        }}
-                      />
-                    </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-[var(--color-ink)]">
+                                {col.name}
+                              </span>
+                              {isRecommended && (
+                                <span className="text-[10px] uppercase tracking-wide font-bold px-2 py-0.5 rounded-full bg-brand-500/15 text-brand-300">
+                                  ⭐ Recommended
+                                </span>
+                              )}
+                              <span className="text-[10px] uppercase tracking-wide font-medium px-2 py-0.5 rounded-full bg-[var(--color-surface-2)] text-[var(--color-ink-muted)]">
+                                {col.problem_type}
+                              </span>
+                            </div>
+                            <p className="mt-1.5 text-xs text-[var(--color-ink-muted)]">
+                              {col.reason}
+                            </p>
+                          </div>
+                        </div>
 
-                    <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
-                      {col.reason}
-                    </p>
-                  </div>
-                ))}
+                        {/* Score */}
+                        <div className="text-right shrink-0">
+                          <div
+                            className="text-lg font-bold"
+                            style={{ color: scoreColor(col.score) }}
+                          >
+                            {col.score}%
+                          </div>
+                          <div
+                            className="text-[10px] font-medium uppercase tracking-wide"
+                            style={{ color: scoreColor(col.score) }}
+                          >
+                            {scoreLabel}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Score bar */}
+                      <div className="mt-4 h-2 rounded-full bg-[var(--color-surface-2)] overflow-hidden">
+                        <motion.div
+                          className="h-full rounded-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${col.score}%` }}
+                          transition={{ duration: 0.6, delay: 0.1 + i * 0.05, ease: "easeOut" }}
+                          style={{ background: scoreColor(col.score) }}
+                        />
+                      </div>
+
+                      {/* Meta badges */}
+                      <div className="mt-4 flex items-center gap-4 text-xs text-[var(--color-ink-muted)]">
+                        <span>
+                          <strong className="text-[var(--color-ink)]">
+                            {col.unique_values}
+                          </strong>{" "}
+                          unique
+                        </span>
+                        <span>
+                          <strong className="text-[var(--color-ink)]">
+                            {col.missing_values}
+                          </strong>{" "}
+                          missing
+                        </span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
 
               {selectedTarget && (
-                <button
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
                   onClick={handleTrain}
                   disabled={isTraining}
-                  className={`mt-6 px-7 py-3.5 rounded-xl font-semibold transition-all ${isTraining
-                    ? "bg-[var(--color-surface-2)] text-[var(--color-ink-dim)] cursor-not-allowed"
-                    : "bg-brand-500 text-black hover:bg-brand-400 hover:shadow-xl hover:shadow-brand-500/30 hover:-translate-y-0.5"
-                    }`}
+                  className={`mt-6 px-7 py-3.5 rounded-xl font-semibold transition-all ${
+                    isTraining
+                      ? "bg-[var(--color-surface-2)] text-[var(--color-ink-dim)] cursor-not-allowed"
+                      : "bg-brand-500 text-black hover:bg-brand-400 hover:shadow-xl hover:shadow-brand-500/30 hover:-translate-y-0.5"
+                  }`}
                 >
-                  {isTraining
-                    ? "Training..."
-                    : `Train Model on "${selectedTarget}"`}
-                </button>
+                  {isTraining ? "Training..." : `Train Model on "${selectedTarget}"`}
+                </motion.button>
               )}
             </motion.div>
           )}
