@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
 import AuthRobot from "../components/AuthRobot";
+import Logo from "../components/Logo";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -43,16 +44,8 @@ export default function LoginPage() {
           className="w-full max-w-md"
         >
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 mb-10">
-            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center font-bold text-black text-lg">
-              A
-            </div>
-            <span
-              className="text-xl font-bold"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              Algotrix
-            </span>
+          <Link href="/" className="inline-flex mb-10">
+            <Logo />
           </Link>
 
           <h1 className="text-3xl sm:text-4xl font-bold text-gradient">
@@ -75,7 +68,15 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="text-sm text-[var(--color-ink-muted)]">Password</label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-[var(--color-ink-muted)]">Password</label>
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-brand-300 hover:text-brand-200 transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <input
                 type="password"
                 placeholder="••••••••"

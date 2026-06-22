@@ -5,8 +5,11 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
 import AuthRobot from "../components/AuthRobot";
+import { useRouter } from "next/navigation";
+
 
 export default function SignupPage() {
+  const router = useRouter();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -56,7 +59,8 @@ export default function SignupPage() {
       setMessage("Error: " + error.message);
       setSuccess(false);
     } else {
-      setMessage("Account created successfully! You can now log in.");
+      setMessage("Account created successfully! Redirecting to login...");
+      setTimeout(() => router.push("/login"), 1500);
       setSuccess(true);
     }
     setLoading(false);
@@ -165,20 +169,18 @@ export default function SignupPage() {
             <button
               onClick={handleSignup}
               disabled={loading}
-              className={`w-full py-3 rounded-xl font-semibold transition-all ${
-                loading
+              className={`w-full py-3 rounded-xl font-semibold transition-all ${loading
                   ? "bg-[var(--color-surface-2)] text-[var(--color-ink-dim)] cursor-not-allowed"
                   : "bg-brand-500 text-black hover:bg-brand-400 hover:shadow-xl hover:shadow-brand-500/30"
-              }`}
+                }`}
             >
               {loading ? "Creating account..." : "Sign up"}
             </button>
 
             {message && (
               <p
-                className={`text-sm text-center ${
-                  success ? "text-brand-300" : "text-red-400"
-                }`}
+                className={`text-sm text-center ${success ? "text-brand-300" : "text-red-400"
+                  }`}
               >
                 {message}
               </p>
