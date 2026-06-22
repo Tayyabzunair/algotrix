@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
+import Logo from "./Logo";
+
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -27,21 +29,12 @@ export default function Navbar() {
       className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 pt-4"
     >
       <nav
-        className={`mx-auto max-w-6xl flex items-center justify-between rounded-2xl px-5 py-3 transition-all duration-300 ${
-          scrolled ? "glass-strong shadow-2xl shadow-black/40" : "bg-transparent"
-        }`}
+        className={`mx-auto max-w-6xl flex items-center justify-between rounded-2xl px-5 py-3 transition-all duration-300 ${scrolled ? "glass-strong shadow-2xl shadow-black/40" : "bg-transparent"
+          }`}
       >
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center font-bold text-black text-lg shadow-lg shadow-brand-500/30 transition-transform group-hover:scale-110">
-            A
-          </div>
-          <span
-            className="text-xl font-bold tracking-tight"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            Algotrix
-          </span>
+        <Logo />
         </Link>
 
         {/* Center links — desktop only */}

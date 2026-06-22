@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import Link from "next/link";
 import LogoutButton from "./logout-button";
+import Logo from "../components/Logo";
 import {
   FileText,
   Database,
@@ -102,15 +103,7 @@ export default function DashboardClient({ firstName, email, datasets }: Props) {
           className="flex items-center justify-between flex-wrap gap-4"
         >
           <Link href="/" className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center font-bold text-black text-lg">
-              A
-            </div>
-            <span
-              className="text-xl font-bold"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              Algotrix
-            </span>
+            <Logo />
           </Link>
           <LogoutButton />
         </motion.div>
