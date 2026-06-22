@@ -19,7 +19,7 @@ export default function Footer() {
 
           {/* Product */}
           <div>
-            <h4 className="text-sm font-bold text-[var(--color-ink)]">Product</h4>
+            <h4 className="text-sm font-bold text-brand-400">Product</h4>
             <ul className="mt-4 space-y-3 text-sm">
               <li>
                 <Link
@@ -45,15 +45,13 @@ export default function Footer() {
                   Blog
                 </Link>
               </li>
-              <li>
-                
-              </li>
+              
             </ul>
           </div>
 
           {/* Account */}
           <div>
-            <h4 className="text-sm font-bold text-[var(--color-ink)]">Account</h4>
+            <h4 className="text-sm font-bold text-brand-400">Account</h4>
             <ul className="mt-4 space-y-3 text-sm">
               <li>
                 <Link
@@ -71,14 +69,13 @@ export default function Footer() {
                   Sign up
                 </Link>
               </li>
-              <li>
-              </li>
+             
             </ul>
           </div>
 
           {/* Company */}
           <div>
-            <h4 className="text-sm font-bold text-[var(--color-ink)]">Company</h4>
+            <h4 className="text-sm font-bold text-brand-400">Company</h4>
             <ul className="mt-4 space-y-3 text-sm">
               <li>
                 <Link
@@ -88,9 +85,7 @@ export default function Footer() {
                   About
                 </Link>
               </li>
-              <li>
-                
-              </li>
+
               <li>
                 <Link
                   href="/signup"
@@ -104,12 +99,9 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 pt-8 border-t border-[var(--color-border)] flex items-center justify-between flex-wrap gap-4">
+        <div className="mt-12 pt-8 border-t border-[var(--color-border)]">
           <p className="text-sm text-[var(--color-ink-dim)]">
             © 2026 Algotrix. All rights reserved.
-          </p>
-          <p className="text-sm text-[var(--color-ink-dim)]">
-            Built with Next.js & FastAPI
           </p>
         </div>
       </div>
