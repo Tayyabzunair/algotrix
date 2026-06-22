@@ -19,6 +19,7 @@ export default function Navbar() {
     { label: "Features", href: "/features" },
     { label: "How it Works", href: "/how-it-works" },
     { label: "Dashboard", href: "/dashboard" },
+    { label: "Blog", href: "/blog" },
   ];
 
   return (
