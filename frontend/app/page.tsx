@@ -96,7 +96,7 @@ export default function LandingPage() {
           className="mt-10 flex flex-col sm:flex-row gap-4 justify-center"
         >
           <Link
-            href="/upload"
+            href="/signup"
             className="px-7 py-3.5 rounded-xl bg-brand-500 text-black font-semibold hover:bg-brand-400 transition-all hover:shadow-xl hover:shadow-brand-500/30 hover:-translate-y-0.5"
           >
             Start Building Free →

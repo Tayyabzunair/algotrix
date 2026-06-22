@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
 import Navbar from "../components/Navbar";
@@ -91,6 +92,8 @@ const fadeUp = {
 };
 
 export default function UploadPage() {
+  const router = useRouter(); // ✅ NEW
+
   const [file, setFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -102,6 +105,20 @@ export default function UploadPage() {
   const [isTraining, setIsTraining] = useState(false);
   const [eda, setEda] = useState<EdaReport | null>(null);
   const [isEda, setIsEda] = useState(false);
+
+  // ✅ NEW — protect this page: logged-out users redirect to /login
+  useEffect(() => {
+    async function checkAuth() {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login");
+      }
+    }
+    checkAuth();
+  }, [router]);
 
   async function handleUpload() {
     if (!file) {

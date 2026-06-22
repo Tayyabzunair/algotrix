@@ -7,21 +7,49 @@ import { createClient } from "@/lib/supabase/client";
 import AuthRobot from "../components/AuthRobot";
 
 export default function SignupPage() {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
   async function handleSignup() {
-    setLoading(true);
     setMessage("");
     setSuccess(false);
+
+    // ----- Validation -----
+    if (!firstName.trim() || !lastName.trim()) {
+      setMessage("Please enter your first and last name.");
+      return;
+    }
+    if (!email.trim()) {
+      setMessage("Please enter your email.");
+      return;
+    }
+    if (password.length < 6) {
+      setMessage("Password must be at least 6 characters long.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setMessage("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
     const supabase = createClient();
 
     const { error } = await supabase.auth.signUp({
       email: email,
       password: password,
+      options: {
+        data: {
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+        },
+      },
     });
 
     if (error) {
@@ -65,24 +93,70 @@ export default function SignupPage() {
           </p>
 
           <div className="glass rounded-3xl p-8 mt-8 space-y-4">
+            {/* First + Last name side by side */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm text-[var(--color-ink-muted)]">
+                  First name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Your First Name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="mt-2 w-full px-4 py-3 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-ink)] placeholder:text-[var(--color-ink-dim)] focus:outline-none focus:border-brand-400/50 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-[var(--color-ink-muted)]">
+                  Last name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Your Last Name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="mt-2 w-full px-4 py-3 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-ink)] placeholder:text-[var(--color-ink-dim)] focus:outline-none focus:border-brand-400/50 transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Email */}
             <div>
               <label className="text-sm text-[var(--color-ink-muted)]">Email</label>
               <input
                 type="email"
-                placeholder="you@example.com"
+                placeholder="E-mail Address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-2 w-full px-4 py-3 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-ink)] placeholder:text-[var(--color-ink-dim)] focus:outline-none focus:border-brand-400/50 transition-colors"
               />
             </div>
 
+            {/* Password */}
             <div>
-              <label className="text-sm text-[var(--color-ink-muted)]">Password</label>
+              <label className="text-sm text-[var(--color-ink-muted)]">
+                Password
+              </label>
               <input
                 type="password"
-                placeholder="••••••••"
+                placeholder="At least 6 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="mt-2 w-full px-4 py-3 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-ink)] placeholder:text-[var(--color-ink-dim)] focus:outline-none focus:border-brand-400/50 transition-colors"
+              />
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label className="text-sm text-[var(--color-ink-muted)]">
+                Confirm password
+              </label>
+              <input
+                type="password"
+                placeholder="Re-enter your password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSignup()}
                 className="mt-2 w-full px-4 py-3 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-ink)] placeholder:text-[var(--color-ink-dim)] focus:outline-none focus:border-brand-400/50 transition-colors"
               />
@@ -113,7 +187,10 @@ export default function SignupPage() {
 
           <p className="mt-6 text-center text-sm text-[var(--color-ink-muted)]">
             Already have an account?{" "}
-            <Link href="/login" className="text-brand-300 hover:text-brand-400 font-semibold">
+            <Link
+              href="/login"
+              className="text-brand-300 hover:text-brand-400 font-semibold"
+            >
               Log in
             </Link>
           </p>
