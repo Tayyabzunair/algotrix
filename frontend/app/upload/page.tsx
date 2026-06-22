@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
 import Navbar from "../components/Navbar";
 import { Brush, BarChart3, Download } from "lucide-react";
+import { useToast } from "../components/Toast";
+
 
 
 type ColumnInfo = {
@@ -93,7 +95,7 @@ const fadeUp = {
 
 export default function UploadPage() {
   const router = useRouter(); // ✅ NEW
-
+  const { showToast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
