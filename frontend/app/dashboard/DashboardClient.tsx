@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import Link from "next/link";
 import LogoutButton from "./logout-button";
 import Logo from "../components/Logo";
+
 import {
   FileText,
   Database,
@@ -53,9 +54,9 @@ export default function DashboardClient({ firstName, email, datasets }: Props) {
   const lastActivity =
     datasets.length > 0 && datasets[0].created_at
       ? new Date(datasets[0].created_at).toLocaleDateString(undefined, {
-          month: "short",
-          day: "numeric",
-        })
+        month: "short",
+        day: "numeric",
+      })
       : "—";
 
   const now = new Date();
@@ -119,8 +120,9 @@ export default function DashboardClient({ firstName, email, datasets }: Props) {
             <span className="h-1.5 w-1.5 rounded-full bg-brand-400 animate-pulse" />
             Dashboard
           </div>
-          <h1 className="text-4xl sm:text-5xl font-bold text-gradient">
-            Welcome back, {firstName} 👋
+          <h1 className="text-4xl sm:text-5xl font-bold text-gradient flex items-center gap-3">
+            Welcome back, {firstName}
+            <Sparkles className="h-8 w-8 text-brand-400" />
           </h1>
           <p className="mt-3 text-[var(--color-ink-muted)]">
             Logged in as{" "}
@@ -326,11 +328,10 @@ function StatCard({
       className="glass rounded-3xl p-6 transition-colors hover:border-brand-400/30"
     >
       <div
-        className={`h-10 w-10 rounded-xl flex items-center justify-center mb-4 ${
-          accent
+        className={`h-10 w-10 rounded-xl flex items-center justify-center mb-4 ${accent
             ? "bg-brand-500/20 text-brand-300"
             : "bg-brand-500/10 text-brand-400"
-        }`}
+          }`}
       >
         {icon}
       </div>

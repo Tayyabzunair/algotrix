@@ -1,4 +1,8 @@
 @import "tailwindcss";
+html {
+  scroll-behavior: smooth;
+}
+
 
 /* ============================================
    DESIGN TOKENS — Algotrix Premium Dark Theme
@@ -123,4 +127,10 @@ h1, h2, h3, h4, h5 {
     linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 60px 60px;
+}
+/* Spline watermark hide */
+#spline-watermark,
+a[href*="spline.design"],
+canvas + a {
+  display: none !important;
 }
