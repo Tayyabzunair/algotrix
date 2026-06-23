@@ -50,6 +50,7 @@ Algotrix is a full-stack web application that automates the entire machine learn
 
 ### Frontend Setup
 ```bash
+
 cd frontend
 npm install
 npm run dev
@@ -58,6 +59,7 @@ Create a .env.local file in the frontend folder:
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 NEXT_PUBLIC_API_URL=http://localhost:8000
+
 Backend Setup
 cd backend
 pip install -r requirements.txt
@@ -68,7 +70,6 @@ Building Algotrix was a complete end-to-end journey — designing the UI, engine
 
 📬 Contact
 Muhammad Tayyab Zunair
-
-LinkedIn: [www.linkedin.com/in/mtayyabzunair]
+LinkedIn: www.linkedin.com/in/mtayyabzunair
 Email: mtayyabzunair@gmail.com
 ⭐ If you found this project interesting, consider giving it a star!
