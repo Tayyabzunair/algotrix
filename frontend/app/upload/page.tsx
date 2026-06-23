@@ -8,6 +8,9 @@ import Navbar from "../components/Navbar";
 import { Brush, BarChart3, Download, Star, Check, Sparkles } from "lucide-react";
 import { useToast } from "../components/Toast";
 
+// ✅ Backend URL — live (HF Space) ya local fallback
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 type ColumnInfo = {
   name: string;
   dtype: string;
@@ -180,7 +183,7 @@ export default function UploadPage() {
     try {
       const profileForm = new FormData();
       profileForm.append("file", file);
-      const profileRes = await fetch("http://localhost:8000/profile", {
+      const profileRes = await fetch(`${API}/profile`, {
         method: "POST",
         body: profileForm,
       });
@@ -190,7 +193,7 @@ export default function UploadPage() {
 
       const cleanForm = new FormData();
       cleanForm.append("file", file);
-      const cleanRes = await fetch("http://localhost:8000/clean", {
+      const cleanRes = await fetch(`${API}/clean`, {
         method: "POST",
         body: cleanForm,
       });
@@ -200,7 +203,7 @@ export default function UploadPage() {
 
       const targetForm = new FormData();
       targetForm.append("file", file);
-      const targetRes = await fetch("http://localhost:8000/analyze-target", {
+      const targetRes = await fetch(`${API}/analyze-target`, {
         method: "POST",
         body: targetForm,
       });
@@ -237,7 +240,7 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("http://localhost:8000/eda", {
+      const res = await fetch(`${API}/eda`, {
         method: "POST",
         body: formData,
       });
@@ -278,7 +281,7 @@ export default function UploadPage() {
       formData.append("file", file);
       formData.append("target_column", selectedTarget);
 
-      const res = await fetch("http://localhost:8000/train", {
+      const res = await fetch(`${API}/train`, {
         method: "POST",
         body: formData,
       });
@@ -721,12 +724,41 @@ export default function UploadPage() {
                     </tbody>
                   </table>
                 </div>
-                {/* ⬇️ Comparison block YAHAN ⬇️ */}
+
+                {/* Model Comparison (CV Score) */}
                 <div className="mt-6">
                   <h3 className="text-sm font-semibold text-[var(--color-ink-muted)] mb-4">
                     Model Comparison (CV Score)
                   </h3>
-                  {/* ...baaki block jo maine pichle message me diya... */}
+                  <div className="space-y-3">
+                    {[...training.results]
+                      .sort((a, b) => b.cv_score - a.cv_score)
+                      .map((r, i) => {
+                        const isBest = r.model === training.best_model;
+                        return (
+                          <div key={r.model} className="flex items-center gap-3">
+                            <span className="w-32 text-xs text-[var(--color-ink-muted)] truncate shrink-0">
+                              {r.model}
+                            </span>
+                            <div className="flex-1 h-3 rounded-full bg-[var(--color-surface-2)] overflow-hidden">
+                              <motion.div
+                                className="h-full rounded-full"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${r.cv_score}%` }}
+                                transition={{ duration: 0.7, delay: i * 0.08, ease: "easeOut" }}
+                                style={{ background: isBest ? "#10b981" : "#6b7280" }}
+                              />
+                            </div>
+                            <span
+                              className="w-20 text-right text-xs font-semibold shrink-0"
+                              style={{ color: isBest ? "#34d399" : "var(--color-ink-muted)" }}
+                            >
+                              {r.cv_score}%{isBest ? " · Best" : ""}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
 
                 <p className="mt-4 text-sm">
@@ -816,7 +848,7 @@ export default function UploadPage() {
                 </div>
 
                 <a
-                  href="http://localhost:8000/download-model"
+                  href={`${API}/download-model`}
                   className="inline-block mt-7 px-7 py-3.5 rounded-xl bg-brand-500 text-black font-semibold hover:bg-brand-400 transition-all hover:shadow-xl hover:shadow-brand-500/30 hover:-translate-y-0.5"
                 >
                   <span className="flex items-center gap-2">

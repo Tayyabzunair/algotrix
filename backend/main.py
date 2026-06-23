@@ -1,4 +1,5 @@
 import os
+os.makedirs("trained_models", exist_ok=True)
 
 from eda import generate_eda
 from fastapi import FastAPI, UploadFile, File, Form
@@ -11,14 +12,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# Allow the frontend (port 3000) to talk to this backend
+# Allow frontend to talk to this backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 
 
 @app.get("/")

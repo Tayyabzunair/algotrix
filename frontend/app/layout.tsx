@@ -60,7 +60,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable}`}>
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={`${spaceGrotesk.variable} ${inter.variable}`}
+    >
       <body className="antialiased">
         <ToastProvider>{children}</ToastProvider>
       </body>
