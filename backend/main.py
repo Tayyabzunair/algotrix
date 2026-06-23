@@ -15,7 +15,10 @@ app = FastAPI()
 # Allow frontend to talk to this backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+   allow_origins=[
+        "http://localhost:3000",        # local development
+        "https://algotrix.vercel.app",  # live frontend
+    ],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
